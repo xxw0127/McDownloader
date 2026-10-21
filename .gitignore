@@ -1,0 +1,33 @@
+# Build output
+build/
+build-*/
+*.o
+*.obj
+*.exe
+*.dll
+*.a
+*.lib
+*.pdb
+*.ilk
+*.exp
+moc_*.cpp
+moc_*.h
+qrc_*.cpp
+ui_*.h
+Makefile
+Makefile.Debug
+Makefile.Release
+.qmake.stash
+*.pro.user
+*.user
+
+# IDE
+.vs/
+.vscode/
+*.userprefs
+CMakeLists.txt.user
+
+# Runtime
+logs/
+*.log
+config.ini
