@@ -4,6 +4,7 @@
 #include "tst_checksum.h"
 #include "tst_logger.h"
 #include "tst_paths.h"
+#include "tst_version.h"
 
 namespace
 {
@@ -43,6 +44,10 @@ int main(int argc, char *argv[])
     {
         TstLogger test;
         status |= runSuite(&test, QStringLiteral("logger"), argc, argv);
+    }
+    {
+        TstVersion test;
+        status |= runSuite(&test, QStringLiteral("version"), argc, argv);
     }
     return status;
 }
