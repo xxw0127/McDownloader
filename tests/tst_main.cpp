@@ -1,6 +1,7 @@
 #include <QCoreApplication>
 #include <QtTest>
 
+#include "tst_appcontroller.h"
 #include "tst_checksum.h"
 #include "tst_download.h"
 #include "tst_installcontroller.h"
@@ -78,6 +79,10 @@ int main(int argc, char *argv[])
     {
         TstInstallController test;
         status |= runSuite(&test, QStringLiteral("installcontroller"), argc, argv);
+    }
+    {
+        TstAppController test;
+        status |= runSuite(&test, QStringLiteral("appcontroller"), argc, argv);
     }
     return status;
 }

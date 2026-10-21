@@ -11,7 +11,7 @@ Rectangle {
     radius: 4
     border.width: 1
     border.color: "#D9DDE3"
-    height: content.implicitHeight + 28
+    implicitHeight: content.implicitHeight + 28
 
     Column {
         id: content

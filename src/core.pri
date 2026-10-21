@@ -8,9 +8,11 @@ HEADERS += \
     $$PWD/core/Logger.h \
     $$PWD/core/LoaderKind.h \
     $$PWD/core/VersionInfo.h \
+    $$PWD/core/AppSettings.h \
     $$PWD/core/VersionManifest.h \
     $$PWD/core/VersionGrouping.h \
     $$PWD/models/VersionListModel.h \
+    $$PWD/models/LoaderListModel.h \
     $$PWD/download/FileSpec.h \
     $$PWD/download/DownloadService.h \
     $$PWD/download/JsonFetcher.h \
@@ -29,9 +31,11 @@ SOURCES += \
     $$PWD/core/Checksum.cpp \
     $$PWD/core/Logger.cpp \
     $$PWD/core/LoaderKind.cpp \
+    $$PWD/core/AppSettings.cpp \
     $$PWD/core/VersionManifest.cpp \
     $$PWD/core/VersionGrouping.cpp \
     $$PWD/models/VersionListModel.cpp \
+    $$PWD/models/LoaderListModel.cpp \
     $$PWD/download/DownloadService.cpp \
     $$PWD/download/JsonFetcher.cpp \
     $$PWD/download/MirrorResolver.cpp \

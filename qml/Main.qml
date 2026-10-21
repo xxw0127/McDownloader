@@ -93,20 +93,9 @@ Window {
                 }
             }
 
-            Rectangle {
-                Layout.preferredWidth: 320
+            InstallPanel {
+                Layout.preferredWidth: 340
                 Layout.fillHeight: true
-                color: "#FFFFFF"
-                radius: 4
-                border.width: 1
-                border.color: "#D9DDE3"
-
-                Text {
-                    anchors.centerIn: parent
-                    text: "安装设置"
-                    font.pixelSize: 13
-                    color: "#6B7280"
-                }
             }
         }
     }

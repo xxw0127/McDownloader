@@ -1,4 +1,4 @@
-QT += testlib
+QT += testlib gui widgets
 CONFIG += console testcase c++17
 CONFIG -= app_bundle
 TEMPLATE = app
@@ -22,6 +22,7 @@ HEADERS += \
     $$PWD/tst_mirror.h \
     $$PWD/tst_vanilla.h \
     $$PWD/tst_installcontroller.h \
+    $$PWD/tst_appcontroller.h \
     $$PWD/TestHttpServer.h \
     $$PWD/../src/AppController.h
 
@@ -37,5 +38,6 @@ SOURCES += \
     $$PWD/tst_mirror.cpp \
     $$PWD/tst_vanilla.cpp \
     $$PWD/tst_installcontroller.cpp \
+    $$PWD/tst_appcontroller.cpp \
     $$PWD/TestHttpServer.cpp \
     $$PWD/../src/AppController.cpp

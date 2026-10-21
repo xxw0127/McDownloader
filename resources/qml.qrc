@@ -4,6 +4,11 @@
         <file>../qml/components/SectionCard.qml</file>
         <file>../qml/components/VersionRow.qml</file>
         <file>../qml/components/LatestCard.qml</file>
+        <file>../qml/components/InstallPanel.qml</file>
+        <file>../qml/components/FolderField.qml</file>
+        <file>../qml/components/ProgressPanel.qml</file>
+        <file>../qml/components/FlatButton.qml</file>
+        <file>../qml/components/FlatComboBox.qml</file>
         <file>fixtures/manifest_small.json</file>
         <file>images/grass.png</file>
         <file>images/command_block.png</file>

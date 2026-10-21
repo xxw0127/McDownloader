@@ -1,7 +1,7 @@
 TEMPLATE = app
 TARGET = PCL2Downloader
 
-QT += quick quickcontrols2
+QT += quick quickcontrols2 widgets
 
 CONFIG += c++17
 CONFIG -= app_bundle

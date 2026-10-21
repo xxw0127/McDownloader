@@ -48,12 +48,15 @@ int main(int argc, char *argv[])
     Logger::info(QStringLiteral("main"), QStringLiteral("启动 PCL2 下载器"));
 
     AppController controller;
-    controller.loadMockVersions();
-
     if (QCoreApplication::arguments().contains(QStringLiteral("--ui-smoke")))
     {
+        controller.loadMockVersions();
         QMetaObject::invokeMethod(controller.versionModel(), "toggleGroup", Q_ARG(int, 0));
         controller.setSelectedVersion(QStringLiteral("26.3"));
+    }
+    else
+    {
+        controller.refreshVersions();
     }
 
     QQmlApplicationEngine engine;
