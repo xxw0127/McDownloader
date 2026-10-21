@@ -1,6 +1,7 @@
 #include "tst_java.h"
 
 #include "installers/JavaLocator.h"
+#include "installers/JavaRequirement.h"
 
 void TstJava::parsesLegacy8()
 {
@@ -74,4 +75,19 @@ void TstJava::installerSelectPrefersExactMajor()
     candidates.append({QStringLiteral("C:/Java25/bin/java.exe"), 25, true, QString()});
 
     QCOMPARE(JavaLocator::selectForInstaller(candidates, 17).major, 17);
+}
+
+void TstJava::requirementFromJson()
+{
+    QJsonObject versionJson;
+    versionJson.insert(QStringLiteral("javaVersion"), QJsonObject{{QStringLiteral("majorVersion"), 21}});
+    QCOMPARE(JavaRequirement::majorForVersion(versionJson, QStringLiteral("1.21.1")), 21);
+}
+
+void TstJava::requirementFallbacks()
+{
+    QCOMPARE(JavaRequirement::majorForVersion(QJsonObject(), QStringLiteral("1.7.10")), 8);
+    QCOMPARE(JavaRequirement::majorForVersion(QJsonObject(), QStringLiteral("1.12.2")), 8);
+    QCOMPARE(JavaRequirement::majorForVersion(QJsonObject(), QStringLiteral("1.20.1")), 17);
+    QCOMPARE(JavaRequirement::majorForVersion(QJsonObject(), QStringLiteral("1.21.1")), 21);
 }

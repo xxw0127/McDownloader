@@ -72,6 +72,9 @@ private:
     bool writeJsonObject(const QString& versionId, const QJsonObject& object, QString* error);
     bool writeLauncherProfiles(QString* error);
     bool applyCopies(QString* error);
+    void configureJava(const QString& versionId);
+    bool createJavaLink(const QString& versionDir, const QString& javaPath, QString* error);
+    bool writePclJavaConfig(const QString& versionDir, const QString& javaPath, QString* error);
     void finishInstall();
     void fail(const QString& error);
 

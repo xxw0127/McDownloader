@@ -5,8 +5,10 @@
 #include <QFileInfo>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QProcess>
 #include <QSaveFile>
 
+#include "core/Logger.h"
 #include "core/Paths.h"
 #include "core/VersionManifest.h"
 #include "download/DownloadService.h"
@@ -14,6 +16,8 @@
 #include "download/MirrorResolver.h"
 #include "installers/InstallPlan.h"
 #include "installers/ForgeInstaller.h"
+#include "installers/JavaLocator.h"
+#include "installers/JavaRequirement.h"
 #include "installers/LoaderCatalog.h"
 #include "installers/NeoForgeInstaller.h"
 #include "installers/ProfileInstaller.h"
@@ -503,10 +507,165 @@ bool InstallController::writeJsonObject(const QString& versionId, const QJsonObj
     return true;
 }
 
+void InstallController::configureJava(const QString& versionId)
+{
+    const int requiredMajor = JavaRequirement::majorForVersion(m_versionJson, m_versionId);
+
+    JavaInfo selected;
+    const QFileInfo requestedJava(m_request.javaPath);
+    if (!m_request.javaPath.isEmpty() && requestedJava.exists() && requestedJava.isFile())
+    {
+        selected.path = requestedJava.absoluteFilePath();
+        selected.major = requiredMajor;
+        selected.is64Bit = true;
+    }
+    else
+    {
+        selected = JavaLocator::selectForInstaller(JavaLocator::scan(m_minecraftDir), requiredMajor);
+    }
+
+    if (selected.path.isEmpty())
+    {
+        Logger::warn(QStringLiteral("java"),
+                     QStringLiteral("未找到 Java %1，版本 %2 需要在启动器中手动选择 Java")
+                         .arg(requiredMajor)
+                         .arg(versionId));
+        return;
+    }
+
+    bool ok = false;
+    const QString versionDir = Paths::joinWithin(m_minecraftDir,
+                                                 QStringLiteral("versions/%1").arg(versionId),
+                                                 &ok);
+    if (!ok)
+    {
+        Logger::warn(QStringLiteral("java"), QStringLiteral("Java 配置路径不安全：%1").arg(versionId));
+        return;
+    }
+
+    QString error;
+    if (!createJavaLink(versionDir, selected.path, &error) ||
+        !writePclJavaConfig(versionDir, selected.path, &error))
+    {
+        Logger::warn(QStringLiteral("java"),
+                     QStringLiteral("版本 %1 的 Java 配置失败：%2").arg(versionId, error));
+        return;
+    }
+
+    Logger::info(QStringLiteral("java"),
+                 QStringLiteral("版本 %1 已绑定 Java %2：%3")
+                     .arg(versionId)
+                     .arg(requiredMajor)
+                     .arg(selected.path));
+}
+
+bool InstallController::createJavaLink(const QString& versionDir,
+                                       const QString& javaPath,
+                                       QString* error)
+{
+    const QFileInfo javaInfo(javaPath);
+    if (!javaInfo.exists() || !javaInfo.isFile())
+    {
+        *error = QStringLiteral("Java 可执行文件不存在：%1").arg(javaPath);
+        return false;
+    }
+
+    QDir binDir = javaInfo.dir();
+    if (!binDir.cdUp())
+    {
+        *error = QStringLiteral("无法定位 Java 根目录：%1").arg(javaPath);
+        return false;
+    }
+    const QString javaRoot = binDir.absolutePath();
+    const QString link = QDir(versionDir).filePath(QStringLiteral("java"));
+
+    if (QFileInfo::exists(link) && QFileInfo::exists(QDir(link).filePath(QStringLiteral("bin/java.exe"))))
+        return true;
+
+#ifdef Q_OS_WIN
+    if (QFileInfo::exists(link))
+        QProcess::execute(QStringLiteral("cmd.exe"),
+                          {QStringLiteral("/c"), QStringLiteral("rmdir"),
+                           QDir::toNativeSeparators(link)});
+    const int code = QProcess::execute(QStringLiteral("cmd.exe"),
+                                       {QStringLiteral("/c"), QStringLiteral("mklink"),
+                                        QStringLiteral("/J"), QDir::toNativeSeparators(link),
+                                        QDir::toNativeSeparators(javaRoot)});
+    if (code != 0)
+    {
+        *error = QStringLiteral("无法创建版本 Java 目录链接");
+        return false;
+    }
+#else
+    if (QFileInfo::exists(link))
+        QDir(link).removeRecursively();
+    if (!QFile::link(javaRoot, link))
+    {
+        *error = QStringLiteral("无法创建版本 Java 符号链接");
+        return false;
+    }
+#endif
+    return true;
+}
+
+bool InstallController::writePclJavaConfig(const QString& versionDir,
+                                           const QString& javaPath,
+                                           QString* error)
+{
+    const QString pclDir = QDir(versionDir).filePath(QStringLiteral("PCL"));
+    if (!QDir().mkpath(pclDir))
+    {
+        *error = QStringLiteral("无法创建版本 PCL 配置目录");
+        return false;
+    }
+
+    const QString iniPath = QDir(pclDir).filePath(QStringLiteral("Setup.ini"));
+    QStringList lines;
+    QFile existing(iniPath);
+    if (existing.open(QIODevice::ReadOnly))
+    {
+        const QStringList oldLines = QString::fromUtf8(existing.readAll()).split(QLatin1Char('\n'));
+        for (QString line : oldLines)
+        {
+            line.remove(QLatin1Char('\r'));
+            if (line.startsWith(QLatin1String("VersionArgumentJavaV2:")) ||
+                line.startsWith(QLatin1String("VersionArgumentJavaSelect:")))
+                continue;
+            if (!line.isEmpty())
+                lines.append(line);
+        }
+    }
+
+    QString javaBin = QFileInfo(javaPath).absolutePath();
+    javaBin = QDir::fromNativeSeparators(javaBin);
+    if (!javaBin.endsWith(QLatin1Char('/')))
+        javaBin += QLatin1Char('/');
+
+    lines.append(QStringLiteral("VersionArgumentJavaV2:2"));
+    lines.append(QStringLiteral("VersionArgumentJavaSelect:{\"Path\":\"%1\"}").arg(javaBin));
+
+    QFile file(iniPath);
+    if (!file.open(QIODevice::WriteOnly | QIODevice::Truncate))
+    {
+        *error = QStringLiteral("无法写入版本 PCL 配置");
+        return false;
+    }
+    file.write((lines.join(QStringLiteral("\r\n")) + QStringLiteral("\r\n")).toUtf8());
+    file.flush();
+    if (file.error() != QFile::NoError)
+    {
+        *error = QStringLiteral("写入版本 PCL 配置失败");
+        return false;
+    }
+    return true;
+}
+
 void InstallController::finishInstall()
 {
+    const QString finalId = m_loaderId.isEmpty() ? m_versionId : m_loaderId;
+    configureJava(finalId);
     m_stage = Stage::Idle;
-    emit finished(m_loaderId.isEmpty() ? m_versionId : m_loaderId);
+    emit finished(finalId);
 }
 
 bool InstallController::writeLauncherProfiles(QString* error)

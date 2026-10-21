@@ -1,9 +1,11 @@
 #include "installers/NeoForgeInstaller.h"
 
 #include <QDir>
+#include <QDirIterator>
 #include <QEventLoop>
 #include <QFile>
 #include <QFileInfo>
+#include <QJsonArray>
 #include <QJsonDocument>
 #include <QNetworkAccessManager>
 #include <QNetworkReply>
@@ -12,11 +14,15 @@
 #include <QTimer>
 #include <QVersionNumber>
 
+#include "core/Checksum.h"
 #include "core/Logger.h"
+#include "core/Paths.h"
 #include "installers/JavaLocator.h"
 #include "installers/LoaderCatalog.h"
 #include "installers/ProcessRunner.h"
+#include "installers/ProfileInstaller.h"
 #include "installers/StagingArea.h"
+#include "installers/ZipExtractor.h"
 
 namespace
 {
@@ -25,6 +31,33 @@ QString normalizedLoaderVersion(const QString& mcVersion, const QString& loaderV
     if (mcVersion == QLatin1String("1.20.1") && !loaderVersion.startsWith(QLatin1String("1.20.1-")))
         return QStringLiteral("1.20.1-") + loaderVersion;
     return loaderVersion;
+}
+
+bool copyDirectory(const QString& source, const QString& target, QString* error)
+{
+    QDir sourceDir(source);
+    if (!sourceDir.exists())
+        return true;
+
+    QDirIterator it(source, QDir::Files, QDirIterator::Subdirectories);
+    while (it.hasNext())
+    {
+        const QString sourceFile = it.next();
+        const QString relative = sourceDir.relativeFilePath(sourceFile);
+        const QString targetFile = QDir(target).filePath(relative);
+        if (!QDir().mkpath(QFileInfo(targetFile).absolutePath()))
+        {
+            *error = QStringLiteral("无法创建库目录：%1").arg(QFileInfo(targetFile).absolutePath());
+            return false;
+        }
+        QFile::remove(targetFile);
+        if (!QFile::copy(sourceFile, targetFile))
+        {
+            *error = QStringLiteral("复制库失败：%1").arg(targetFile);
+            return false;
+        }
+    }
+    return true;
 }
 
 bool copyFile(const QString& source, const QString& target, QString* error)
@@ -136,6 +169,162 @@ bool downloadFile(const QList<QUrl>& urls, const QString& target, QString* error
     return false;
 }
 
+bool prepareInstallerLibraries(const QString& installerPath,
+                               const QString& stagingMinecraft,
+                               QString* error)
+{
+    ZipExtractor zip(installerPath);
+    if (!zip.isValid())
+    {
+        *error = QStringLiteral("无法打开 NeoForge 安装器 ZIP");
+        return false;
+    }
+
+    const QByteArray raw = zip.readFile(QStringLiteral("install_profile.json"), error);
+    if (error != nullptr && !error->isEmpty())
+        return false;
+
+    const QJsonDocument document = QJsonDocument::fromJson(raw);
+    if (!document.isObject())
+    {
+        *error = QStringLiteral("NeoForge install_profile.json 无效");
+        return false;
+    }
+
+    const InstallPlan plan = ProfileInstaller::buildPlan(document.object(),
+                                                          stagingMinecraft,
+                                                          QStringLiteral("neoforge-installer"));
+    for (const FileSpec& file : plan.files)
+    {
+        bool ok = false;
+        const QString target = Paths::joinWithin(stagingMinecraft, file.targetRelativePath, &ok);
+        if (!ok)
+        {
+            *error = QStringLiteral("安装器库路径不安全：%1").arg(file.targetRelativePath);
+            return false;
+        }
+
+        QString verifyError;
+        if (Checksum::verifyFile(target, file.size, file.sha1, &verifyError))
+            continue;
+
+        if (file.urls.isEmpty())
+        {
+            *error = QStringLiteral("安装器库缺少下载地址：%1").arg(file.targetRelativePath);
+            return false;
+        }
+
+        if (!downloadFile(file.urls, target, error))
+            return false;
+    }
+    return true;
+}
+
+bool patchGeneratedVersion(const QString& stagingMinecraft,
+                           const QString& mcVersion,
+                           const QString& loaderVersion,
+                           const QString& generatedVersion,
+                           QString* error)
+{
+    Q_UNUSED(mcVersion)
+
+    const QString jsonPath = QDir(stagingMinecraft)
+                                 .filePath(QStringLiteral("versions/%1/%1.json").arg(generatedVersion));
+    QFile file(jsonPath);
+    if (!file.open(QIODevice::ReadOnly))
+    {
+        *error = QStringLiteral("无法读取 NeoForge 版本 JSON：%1").arg(jsonPath);
+        return false;
+    }
+
+    QJsonObject versionJson = QJsonDocument::fromJson(file.readAll()).object();
+    file.close();
+    if (versionJson.isEmpty())
+    {
+        *error = QStringLiteral("NeoForge 版本 JSON 无效");
+        return false;
+    }
+
+    // NeoForge 自带 client provider，不能再用父版本 obfuscated jar，否则模块冲突。
+    versionJson.remove(QStringLiteral("jar"));
+
+    QJsonArray libraries = versionJson.value(QStringLiteral("libraries")).toArray();
+    const bool legacyForgeArtifact = (mcVersion == QLatin1String("1.20.1"));
+    bool hasMainLibrary = false;
+    for (const QJsonValue& value : libraries)
+    {
+        const QString name = value.toObject().value(QStringLiteral("name")).toString();
+        if (name.startsWith(QLatin1String("net.neoforged:neoforge:")) ||
+            (legacyForgeArtifact && name.startsWith(QLatin1String("net.neoforged:forge:"))))
+        {
+            hasMainLibrary = true;
+            break;
+        }
+    }
+
+    if (!hasMainLibrary)
+    {
+        const QString fullVersion = normalizedLoaderVersion(mcVersion, loaderVersion);
+        const QString kind = NeoForgeInstaller::artifactKind(mcVersion);
+        const QString path = legacyForgeArtifact
+                                 ? QStringLiteral("net/neoforged/forge/%1/forge-%1-universal.jar").arg(fullVersion)
+                                 : QStringLiteral("net/neoforged/neoforge/%1/neoforge-%1-universal.jar").arg(fullVersion);
+        const QString relative = QStringLiteral("libraries/") + path;
+        bool ok = false;
+        const QString target = Paths::joinWithin(stagingMinecraft, relative, &ok);
+        if (!ok)
+        {
+            *error = QStringLiteral("NeoForge 主模块路径不安全");
+            return false;
+        }
+
+        if (!QFileInfo::exists(target))
+        {
+            const QList<QUrl> urls = {
+                QUrl(QStringLiteral("https://bmclapi2.bangbang93.com/maven/") + path),
+                QUrl(QStringLiteral("https://maven.neoforged.net/releases/") + path)
+            };
+            if (!downloadFile(urls, target, error))
+                return false;
+        }
+
+        const QByteArray sha1 = Checksum::sha1File(target, error);
+        if (error != nullptr && !error->isEmpty())
+            return false;
+        const qint64 size = QFileInfo(target).size();
+
+        QJsonObject artifact;
+        artifact.insert(QStringLiteral("path"), path);
+        artifact.insert(QStringLiteral("url"),
+                        QStringLiteral("https://maven.neoforged.net/releases/") + path);
+        artifact.insert(QStringLiteral("sha1"), QString::fromLatin1(sha1.toHex()));
+        artifact.insert(QStringLiteral("size"), size);
+
+        QJsonObject downloads;
+        downloads.insert(QStringLiteral("artifact"), artifact);
+        QJsonObject library;
+        library.insert(QStringLiteral("name"),
+                       QStringLiteral("net.neoforged:%1:%2:universal").arg(kind, fullVersion));
+        library.insert(QStringLiteral("downloads"), downloads);
+        libraries.append(library);
+        versionJson.insert(QStringLiteral("libraries"), libraries);
+    }
+
+    QSaveFile output(jsonPath);
+    if (!output.open(QIODevice::WriteOnly))
+    {
+        *error = QStringLiteral("无法写入 NeoForge 版本 JSON");
+        return false;
+    }
+    output.write(QJsonDocument(versionJson).toJson(QJsonDocument::Indented));
+    if (!output.commit())
+    {
+        *error = QStringLiteral("提交 NeoForge 版本 JSON 失败");
+        return false;
+    }
+    return true;
+}
+
 QString findGeneratedVersion(const QString& stagingMinecraft, const QString& baseVersion, QString* error)
 {
     const QDir versions(QDir(stagingMinecraft).filePath(QStringLiteral("versions")));
@@ -244,6 +433,20 @@ NeoForgeInstallResult NeoForgeInstaller::install(const QString& minecraftDir,
     if (!downloadFile(installerUrls(mcVersion, loaderVersion), installer, &error))
         return fail(error);
 
+    // 安装器会重新检查全部库；把已有库复制进 staging，避免官方 Maven 超时。
+    const QString existingLibraries = QDir(minecraftDir).filePath(QStringLiteral("libraries"));
+    if (QDir(existingLibraries).exists())
+    {
+        if (!copyDirectory(existingLibraries,
+                           QDir(staging.minecraftPath()).filePath(QStringLiteral("libraries")),
+                           &error))
+            return fail(error);
+    }
+
+    // NeoForge 安装器的 --mirror 不会覆盖处理器库；先把 install_profile 的库全部下好。
+    if (!prepareInstallerLibraries(installer, staging.minecraftPath(), &error))
+        return fail(error);
+
     QString java = javaPath;
     if (java.isEmpty())
     {
@@ -280,12 +483,16 @@ NeoForgeInstallResult NeoForgeInstaller::install(const QString& minecraftDir,
         generated = findGeneratedVersion(staging.minecraftPath(), mcVersion, &error);
     }
 
-    if (generated.isEmpty())
+    if (generated.isEmpty() || process.exitCode != 0)
     {
         Logger::error(QStringLiteral("neoforge"),
                       QStringLiteral("安装器退出码 %1\n%2").arg(process.exitCode).arg(process.stdErr.right(4000)));
-        return fail(error);
+        return fail(generated.isEmpty() ? error
+                                        : QStringLiteral("NeoForge 安装器退出码 %1").arg(process.exitCode));
     }
+
+    if (!patchGeneratedVersion(staging.minecraftPath(), mcVersion, loaderVersion, generated, &error))
+        return fail(error);
 
     QDir(QDir(staging.minecraftPath()).filePath(QStringLiteral("versions/%1").arg(mcVersion))).removeRecursively();
     if (!staging.mergeInto(&error))

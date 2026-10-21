@@ -29,6 +29,7 @@ HEADERS += \
     $$PWD/installers/ProfileInstaller.h \
     $$PWD/installers/ProcessRunner.h \
     $$PWD/installers/JavaLocator.h \
+    $$PWD/installers/JavaRequirement.h \
     $$PWD/installers/StagingArea.h \
     $$PWD/installers/ForgeInstaller.h \
     $$PWD/installers/ZipExtractor.h \
@@ -60,6 +61,7 @@ SOURCES += \
     $$PWD/installers/ProfileInstaller.cpp \
     $$PWD/installers/ProcessRunner.cpp \
     $$PWD/installers/JavaLocator.cpp \
+    $$PWD/installers/JavaRequirement.cpp \
     $$PWD/installers/StagingArea.cpp \
     $$PWD/installers/ForgeInstaller.cpp \
     $$PWD/installers/ZipExtractor.cpp \

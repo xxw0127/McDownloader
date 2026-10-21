@@ -17,6 +17,8 @@ private slots:
     void selectRejects32Bit();
     void selectReturnsEmptyWhenNoMatch();
     void installerSelectPrefersExactMajor();
+    void requirementFromJson();
+    void requirementFallbacks();
 };
 
 #endif // TST_JAVA_H
