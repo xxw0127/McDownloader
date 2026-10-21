@@ -6,6 +6,7 @@
 #include <QNetworkAccessManager>
 #include <QNetworkReply>
 #include <QNetworkRequest>
+#include <QThread>
 
 #include "core/Checksum.h"
 #include "core/Logger.h"
@@ -272,8 +273,25 @@ void DownloadService::handleReplyFinished(Task* task)
         return;
     }
 
-    QFile::remove(target);
-    if (!QFile::rename(partPath, target))
+    bool renamed = false;
+    for (int attempt = 0; attempt < 5 && !renamed; ++attempt)
+    {
+        QFile::remove(target);
+        renamed = QFile::rename(partPath, target);
+        if (!renamed)
+            QThread::msleep(150);
+    }
+    if (!renamed)
+    {
+        // 某些 Windows 安全软件会在文件关闭后短暂占用句柄，重命名会失败。
+        QFile::remove(target);
+        if (QFile::copy(partPath, target))
+        {
+            QFile::remove(partPath);
+            renamed = true;
+        }
+    }
+    if (!renamed)
     {
         QFile::remove(partPath);
         failAttempt(task, QStringLiteral("无法重命名下载文件：%1").arg(target));

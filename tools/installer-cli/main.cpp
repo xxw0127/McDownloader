@@ -58,7 +58,7 @@ int main(int argc, char* argv[])
     QObject::connect(&controller, &InstallController::progress, [&](qint64 received, qint64 total, const QString& status) {
         if (total > 0)
         {
-            const int percent = int((received * 100) / total);
+            const int percent = qBound(0, int((received * 100) / total), 100);
             if (percent != lastPercent)
             {
                 lastPercent = percent;

@@ -19,9 +19,16 @@ struct MavenCoordinate
     bool valid = false;
 };
 
-MavenCoordinate parseMavenName(const QString& name)
+QString expandPlaceholders(QString value)
+{
+    value.replace(QStringLiteral("${arch}"), QStringLiteral("64"));
+    return value;
+}
+
+MavenCoordinate parseMavenName(const QString& rawName)
 {
     MavenCoordinate coordinate;
+    const QString name = expandPlaceholders(rawName);
     const QStringList parts = name.split(QLatin1Char(':'));
     if (parts.size() < 3)
         return coordinate;
@@ -52,9 +59,11 @@ qint64 jsonSize(const QJsonObject& object)
     return object.value(QStringLiteral("size")).toVariant().toLongLong();
 }
 
-LibraryFile makeFile(const QString& path, const QString& url, const QJsonObject& object, bool isNatives)
+LibraryFile makeFile(const QString& rawPath, const QString& rawUrl, const QJsonObject& object, bool isNatives)
 {
     LibraryFile file;
+    const QString path = expandPlaceholders(rawPath);
+    const QString url = expandPlaceholders(rawUrl);
     file.relativePath = QStringLiteral("libraries/") + path;
     file.size = jsonSize(object);
     file.sha1 = object.value(QStringLiteral("sha1")).toString().toLatin1();

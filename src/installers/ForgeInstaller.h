@@ -23,6 +23,9 @@ public:
                                             const QString& forgeVersion,
                                             const QString& javaPath,
                                             const QJsonObject& versionJson);
+    static ForgeInstallResult installLegacy(const QString& minecraftDir,
+                                            const QString& mcVersion,
+                                            const QString& forgeVersion);
 };
 
 #endif // FORGEINSTALLER_H

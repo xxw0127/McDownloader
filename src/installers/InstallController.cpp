@@ -390,20 +390,18 @@ void InstallController::startLoaderPhase()
 
 void InstallController::startForgeInstall()
 {
-    if (ForgeInstaller::isLegacy(m_versionId))
-    {
-        fail(QStringLiteral("Forge 1.13 以下版本将在后续任务实现"));
-        return;
-    }
-
     m_stage = Stage::ForgeInstalling;
     emit progress(0, 0, QStringLiteral("正在运行 Forge 安装器..."));
 
-    const ForgeInstallResult result = ForgeInstaller::installModern(m_minecraftDir,
-                                                                    m_versionId,
-                                                                    m_request.loaderVersion,
-                                                                    m_request.javaPath,
-                                                                    m_versionJson);
+    const ForgeInstallResult result = ForgeInstaller::isLegacy(m_versionId)
+                                          ? ForgeInstaller::installLegacy(m_minecraftDir,
+                                                                          m_versionId,
+                                                                          m_request.loaderVersion)
+                                          : ForgeInstaller::installModern(m_minecraftDir,
+                                                                          m_versionId,
+                                                                          m_request.loaderVersion,
+                                                                          m_request.javaPath,
+                                                                          m_versionJson);
     if (m_canceled)
     {
         m_stage = Stage::Idle;

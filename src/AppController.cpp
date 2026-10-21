@@ -460,7 +460,7 @@ void AppController::tryFinishManifest()
 
 void AppController::handleInstallProgress(qint64 received, qint64 total, const QString& currentFile)
 {
-    const int percent = total > 0 ? int((received * 100) / total) : 0;
+    const int percent = total > 0 ? qBound(0, int((received * 100) / total), 100) : 0;
     if (m_progress != percent)
     {
         m_progress = percent;

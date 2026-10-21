@@ -8,8 +8,15 @@
 
 namespace
 {
-QString mavenPathFor(const QString& name)
+QString expandPlaceholders(QString value)
 {
+    value.replace(QStringLiteral("${arch}"), QStringLiteral("64"));
+    return value;
+}
+
+QString mavenPathFor(const QString& rawName)
+{
+    const QString name = expandPlaceholders(rawName);
     const QStringList parts = name.split(QLatin1Char(':'));
     if (parts.size() < 3)
         return QString();
@@ -93,18 +100,18 @@ InstallPlan ProfileInstaller::buildPlan(const QJsonObject& profile, const QStrin
                                          .value(QStringLiteral("artifact")).toObject();
         if (!artifact.isEmpty())
         {
-            QString artifactPath = artifact.value(QStringLiteral("path")).toString();
+            QString artifactPath = expandPlaceholders(artifact.value(QStringLiteral("path")).toString());
             if (artifactPath.isEmpty())
                 artifactPath = path;
             file.targetRelativePath = QStringLiteral("libraries/") + artifactPath;
             file.size = jsonSize(artifact);
             file.sha1 = artifact.value(QStringLiteral("sha1")).toString().toLatin1();
-            const QUrl official(artifact.value(QStringLiteral("url")).toString());
+            const QUrl official(expandPlaceholders(artifact.value(QStringLiteral("url")).toString()));
             file.urls = MirrorResolver::libraryUrls(artifactPath, official);
         }
         else
         {
-            QString base = library.value(QStringLiteral("url")).toString();
+            QString base = expandPlaceholders(library.value(QStringLiteral("url")).toString());
             if (base.isEmpty())
                 base = QStringLiteral("https://libraries.minecraft.net/");
             if (!base.endsWith(QLatin1Char('/')))

@@ -18,6 +18,7 @@ private slots:
     void prepareProfileOverridesId();
     void buildPlanUsesMavenUrl();
     void quiltLibraryPrefersOfficial();
+    void expandsArchPlaceholder();
 };
 
 #endif // TST_LOADER_H

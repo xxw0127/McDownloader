@@ -133,6 +133,27 @@ void TstLoader::quiltLibraryPrefersOfficial()
     QCOMPARE(plan.files.first().urls.first().host(), QStringLiteral("maven.quiltmc.org"));
 }
 
+void TstLoader::expandsArchPlaceholder()
+{
+    const QByteArray raw = R"({
+        "id": "forge-legacy-test",
+        "inheritsFrom": "1.7.10",
+        "libraries": [
+            {
+                "name": "tv.twitch:twitch-platform:5.16:natives-windows-${arch}",
+                "url": "https://libraries.minecraft.net/"
+            }
+        ]
+    })";
+
+    QString error;
+    const QJsonObject profile = ProfileInstaller::prepareProfile(raw, QStringLiteral("forge-legacy-test"), &error);
+    QVERIFY(error.isEmpty());
+    const InstallPlan plan = ProfileInstaller::buildPlan(profile, QStringLiteral("D:/mc"), QStringLiteral("forge-legacy-test"));
+    QCOMPARE(plan.files.size(), 1);
+    QVERIFY(plan.files.first().targetRelativePath.contains(QStringLiteral("natives-windows-64.jar")));
+}
+
 void TstLoader::buildPlanUsesMavenUrl()
 {
     const QByteArray raw = R"({

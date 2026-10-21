@@ -12,10 +12,15 @@
 #include <QTimer>
 #include <QVersionNumber>
 
+#include "core/Checksum.h"
 #include "core/Logger.h"
+#include "core/Paths.h"
 #include "installers/JavaLocator.h"
+#include "installers/LegacyForgeExtractor.h"
 #include "installers/ProcessRunner.h"
+#include "installers/ProfileInstaller.h"
 #include "installers/StagingArea.h"
+#include "installers/ZipExtractor.h"
 
 namespace
 {
@@ -75,6 +80,12 @@ bool writeLauncherProfiles(const QString& minecraftDir, QString* error)
 
 bool downloadFile(const QList<QUrl>& urls, const QString& target, QString* error)
 {
+    if (!QDir().mkpath(QFileInfo(target).absolutePath()))
+    {
+        *error = QStringLiteral("无法创建下载目录：%1").arg(QFileInfo(target).absolutePath());
+        return false;
+    }
+
     QNetworkAccessManager manager;
     QString lastError;
 
@@ -126,6 +137,29 @@ bool downloadFile(const QList<QUrl>& urls, const QString& target, QString* error
     return false;
 }
 
+bool writeJsonFile(const QString& path, const QJsonObject& object, QString* error)
+{
+    if (!QDir().mkpath(QFileInfo(path).absolutePath()))
+    {
+        *error = QStringLiteral("无法创建目录：%1").arg(QFileInfo(path).absolutePath());
+        return false;
+    }
+
+    QSaveFile file(path);
+    if (!file.open(QIODevice::WriteOnly))
+    {
+        *error = QStringLiteral("无法写入：%1").arg(path);
+        return false;
+    }
+    file.write(QJsonDocument(object).toJson(QJsonDocument::Indented));
+    if (!file.commit())
+    {
+        *error = QStringLiteral("提交失败：%1").arg(path);
+        return false;
+    }
+    return true;
+}
+
 QString findGeneratedVersion(const QString& stagingMinecraft, const QString& baseVersion, QString* error)
 {
     const QDir versions(QDir(stagingMinecraft).filePath(QStringLiteral("versions")));
@@ -163,7 +197,9 @@ bool ForgeInstaller::isLegacy(const QString& mcVersion)
 
 QList<QUrl> ForgeInstaller::installerUrls(const QString& mcVersion, const QString& forgeVersion)
 {
-    const QString artifact = QStringLiteral("%1-%2").arg(mcVersion, forgeVersion);
+    QString artifact = QStringLiteral("%1-%2").arg(mcVersion, forgeVersion);
+    if (mcVersion.startsWith(QLatin1String("1.7.")))
+        artifact += QLatin1Char('-') + mcVersion;
     const QString path = QStringLiteral("net/minecraftforge/forge/%1/forge-%1-installer.jar").arg(artifact);
     return {
         QUrl(QStringLiteral("https://bmclapi2.bangbang93.com/maven/") + path),
@@ -268,5 +304,88 @@ ForgeInstallResult ForgeInstaller::installModern(const QString& minecraftDir,
     staging.cleanup();
     result.ok = true;
     result.versionId = generated;
+    return result;
+}
+
+ForgeInstallResult ForgeInstaller::installLegacy(const QString& minecraftDir,
+                                                  const QString& mcVersion,
+                                                  const QString& forgeVersion)
+{
+    ForgeInstallResult result;
+    QString error;
+    StagingArea staging = StagingArea::create(minecraftDir, &error);
+    if (staging.path().isEmpty())
+    {
+        result.error = error;
+        return result;
+    }
+
+    auto fail = [&](const QString& message) {
+        staging.cleanup();
+        result.error = message;
+        return result;
+    };
+
+    const QString installerPath = QDir(staging.path()).filePath(QStringLiteral("forge-installer.jar"));
+    if (!downloadFile(installerUrls(mcVersion, forgeVersion), installerPath, &error))
+        return fail(error);
+
+    ZipExtractor zip(installerPath);
+    if (!zip.isValid())
+        return fail(QStringLiteral("无法打开 Forge 安装器 ZIP"));
+
+    const LegacyForgeProfile profile = LegacyForgeExtractor::parse(installerPath, mcVersion, &error);
+    if (!profile.valid)
+        return fail(error);
+
+    bool ok = false;
+    const QString versionTarget = Paths::joinWithin(staging.minecraftPath(),
+                                                    QStringLiteral("versions/%1/%1.json").arg(profile.versionId),
+                                                    &ok);
+    if (!ok || !writeJsonFile(versionTarget, profile.versionJson, &error))
+        return fail(ok ? error : QStringLiteral("Forge 版本 JSON 路径不安全"));
+
+    if (!profile.installerFileEntry.isEmpty() && !profile.installerLibraryPath.isEmpty())
+    {
+        const QString libraryRoot = QDir(staging.minecraftPath()).filePath(QStringLiteral("libraries"));
+        const QString target = Paths::joinWithin(libraryRoot, profile.installerLibraryPath, &ok);
+        if (!ok || !zip.extractFile(profile.installerFileEntry, target, &error))
+            return fail(ok ? error : QStringLiteral("Forge 安装文件路径不安全"));
+    }
+
+    if (!profile.mavenPrefix.isEmpty())
+    {
+        const QString libraryRoot = QDir(staging.minecraftPath()).filePath(QStringLiteral("libraries"));
+        if (!zip.extractPrefix(profile.mavenPrefix, libraryRoot, &error))
+            return fail(error);
+    }
+
+    const InstallPlan plan = ProfileInstaller::buildPlan(profile.versionJson,
+                                                          staging.minecraftPath(),
+                                                          profile.versionId);
+    for (const FileSpec& file : plan.files)
+    {
+        bool targetOk = false;
+        const QString target = Paths::joinWithin(staging.minecraftPath(), file.targetRelativePath, &targetOk);
+        if (!targetOk)
+            return fail(QStringLiteral("Forge 库路径不安全：%1").arg(file.targetRelativePath));
+
+        QString verifyError;
+        if (Checksum::verifyFile(target, file.size, file.sha1, &verifyError))
+            continue;
+
+        if (!QDir().mkpath(QFileInfo(target).absolutePath()))
+            return fail(QStringLiteral("无法创建库目录：%1").arg(QFileInfo(target).absolutePath()));
+
+        if (!downloadFile(file.urls, target, &error))
+            return fail(error);
+    }
+
+    if (!staging.mergeInto(&error))
+        return fail(error);
+
+    staging.cleanup();
+    result.ok = true;
+    result.versionId = profile.versionId;
     return result;
 }
