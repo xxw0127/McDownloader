@@ -78,7 +78,10 @@ bool writeLauncherProfiles(const QString& minecraftDir, QString* error)
     return true;
 }
 
-bool downloadFile(const QList<QUrl>& urls, const QString& target, QString* error)
+bool downloadFile(const QList<QUrl>& urls,
+                  const QString& target,
+                  QString* error,
+                  const std::atomic_bool* cancelFlag = nullptr)
 {
     if (!QDir().mkpath(QFileInfo(target).absolutePath()))
     {
@@ -91,6 +94,12 @@ bool downloadFile(const QList<QUrl>& urls, const QString& target, QString* error
 
     for (const QUrl& url : urls)
     {
+        if (cancelFlag != nullptr && cancelFlag->load())
+        {
+            *error = QStringLiteral("canceled");
+            return false;
+        }
+
         QNetworkRequest request(url);
         request.setAttribute(QNetworkRequest::RedirectPolicyAttribute,
                              QNetworkRequest::NoLessSafeRedirectPolicy);
@@ -116,6 +125,12 @@ bool downloadFile(const QList<QUrl>& urls, const QString& target, QString* error
         const QNetworkReply::NetworkError netError = reply->error();
         const QString netText = reply->errorString();
         reply->deleteLater();
+
+        if (cancelFlag != nullptr && cancelFlag->load())
+        {
+            *error = QStringLiteral("canceled");
+            return false;
+        }
 
         if (netError != QNetworkReply::NoError || status < 200 || status >= 300 || body.isEmpty())
         {
@@ -248,7 +263,7 @@ ForgeInstallResult ForgeInstaller::installModern(const QString& minecraftDir,
         return fail(error);
 
     const QString installer = QDir(staging.path()).filePath(QStringLiteral("forge-installer.jar"));
-    if (!downloadFile(installerUrls(mcVersion, forgeVersion), installer, &error))
+    if (!downloadFile(installerUrls(mcVersion, forgeVersion), installer, &error, cancelFlag))
         return fail(error);
 
     QString java = javaPath;
@@ -319,7 +334,8 @@ ForgeInstallResult ForgeInstaller::installModern(const QString& minecraftDir,
 
 ForgeInstallResult ForgeInstaller::installLegacy(const QString& minecraftDir,
                                                   const QString& mcVersion,
-                                                  const QString& forgeVersion)
+                                                  const QString& forgeVersion,
+                                                  const std::atomic_bool* cancelFlag)
 {
     ForgeInstallResult result;
     QString error;
@@ -337,7 +353,7 @@ ForgeInstallResult ForgeInstaller::installLegacy(const QString& minecraftDir,
     };
 
     const QString installerPath = QDir(staging.path()).filePath(QStringLiteral("forge-installer.jar"));
-    if (!downloadFile(installerUrls(mcVersion, forgeVersion), installerPath, &error))
+    if (!downloadFile(installerUrls(mcVersion, forgeVersion), installerPath, &error, cancelFlag))
         return fail(error);
 
     ZipExtractor zip(installerPath);
@@ -375,6 +391,9 @@ ForgeInstallResult ForgeInstaller::installLegacy(const QString& minecraftDir,
                                                           profile.versionId);
     for (const FileSpec& file : plan.files)
     {
+        if (cancelFlag != nullptr && cancelFlag->load())
+            return fail(QStringLiteral("canceled"));
+
         bool targetOk = false;
         const QString target = Paths::joinWithin(staging.minecraftPath(), file.targetRelativePath, &targetOk);
         if (!targetOk)
@@ -387,7 +406,7 @@ ForgeInstallResult ForgeInstaller::installLegacy(const QString& minecraftDir,
         if (!QDir().mkpath(QFileInfo(target).absolutePath()))
             return fail(QStringLiteral("无法创建库目录：%1").arg(QFileInfo(target).absolutePath()));
 
-        if (!downloadFile(file.urls, target, &error))
+        if (!downloadFile(file.urls, target, &error, cancelFlag))
             return fail(error);
 
         if (!Checksum::verifyFile(target, file.size, file.sha1, &verifyError))
@@ -396,6 +415,9 @@ ForgeInstallResult ForgeInstaller::installLegacy(const QString& minecraftDir,
             return fail(verifyError);
         }
     }
+
+    if (cancelFlag != nullptr && cancelFlag->load())
+        return fail(QStringLiteral("canceled"));
 
     if (!staging.mergeInto(&error))
         return fail(error);

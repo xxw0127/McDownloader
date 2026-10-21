@@ -82,6 +82,25 @@ void TstStaging::mergesLibraries()
     staging.cleanup();
 }
 
+void TstStaging::rollbackRestoresVersionOnLibraryFailure()
+{
+    QTemporaryDir target;
+    QVERIFY(target.isValid());
+
+    writeFile(QDir(target.path()).filePath(QStringLiteral("versions/test/test.json")), QByteArrayLiteral("old"));
+    writeFile(QDir(target.path()).filePath(QStringLiteral("libraries")), QByteArrayLiteral("not-a-directory"));
+
+    QString error;
+    StagingArea staging = StagingArea::create(target.path(), &error);
+    QVERIFY2(error.isEmpty(), qPrintable(error));
+    writeFile(QDir(staging.minecraftPath()).filePath(QStringLiteral("versions/test/test.json")), QByteArrayLiteral("new"));
+    writeFile(QDir(staging.minecraftPath()).filePath(QStringLiteral("libraries/foo/bar.jar")), QByteArrayLiteral("jar"));
+
+    QVERIFY(!staging.mergeInto(&error));
+    QCOMPARE(readFile(QDir(target.path()).filePath(QStringLiteral("versions/test/test.json"))), QByteArrayLiteral("old"));
+    staging.cleanup();
+}
+
 void TstStaging::cleanupRemovesStaging()
 {
     QTemporaryDir target;

@@ -80,6 +80,7 @@ private:
     bool protectVersion(const QString& versionId, QString* error);
     void restoreProtectedVersion();
     void releaseProtectedVersion();
+    bool validateJavaPath(const QString& javaPath, int requiredMajor, QString* error) const;
     void configureJava(const QString& versionId);
     bool createJavaLink(const QString& versionDir, const QString& javaPath, QString* error);
     bool writePclJavaConfig(const QString& versionDir, const QString& javaPath, QString* error);

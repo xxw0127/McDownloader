@@ -28,7 +28,8 @@ public:
                                             const std::atomic_bool* cancelFlag = nullptr);
     static ForgeInstallResult installLegacy(const QString& minecraftDir,
                                             const QString& mcVersion,
-                                            const QString& forgeVersion);
+                                            const QString& forgeVersion,
+                                            const std::atomic_bool* cancelFlag = nullptr);
 };
 
 #endif // FORGEINSTALLER_H

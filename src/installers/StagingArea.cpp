@@ -28,10 +28,19 @@ bool copyDirectory(const QString& source, const QString& target, QString* error)
             return false;
         }
 
-        QFile::remove(targetFile);
-        if (!QFile::copy(sourceFile, targetFile))
+        const QString tempFile = targetFile + QStringLiteral(".pcl2downloader-tmp");
+        QFile::remove(tempFile);
+        if (!QFile::copy(sourceFile, tempFile))
         {
             *error = QStringLiteral("复制文件失败：%1").arg(targetFile);
+            return false;
+        }
+
+        QFile::remove(targetFile);
+        if (!QFile::rename(tempFile, targetFile))
+        {
+            QFile::remove(tempFile);
+            *error = QStringLiteral("替换文件失败：%1").arg(targetFile);
             return false;
         }
     }
@@ -92,8 +101,13 @@ bool StagingArea::mergeInto(QString* error)
         QString backup;
     };
     QVector<VersionBackup> backups;
+    QVector<QString> createdTargets;
 
-    auto rollback = [&backups]() {
+    auto rollback = [&backups, &createdTargets]() {
+        for (const QString& target : createdTargets)
+            QDir(target).removeRecursively();
+        createdTargets.clear();
+
         for (int i = backups.size() - 1; i >= 0; --i)
         {
             const VersionBackup& item = backups.at(i);
@@ -114,8 +128,9 @@ bool StagingArea::mergeInto(QString* error)
         {
             const QString source = versionsDir.filePath(versionName);
             const QString targetVersion = target.filePath(QStringLiteral("versions/%1").arg(versionName));
+            const bool targetExisted = QFileInfo::exists(targetVersion);
 
-            if (QFileInfo::exists(targetVersion))
+            if (targetExisted)
             {
                 const QString backupRoot = target.filePath(QStringLiteral(".pcl2downloader-backup"));
                 if (!QDir().mkpath(backupRoot))
@@ -135,6 +150,10 @@ bool StagingArea::mergeInto(QString* error)
                     return false;
                 }
                 backups.append({targetVersion, backup});
+            }
+            else
+            {
+                createdTargets.append(targetVersion);
             }
 
             if (!copyDirectory(source, targetVersion, error))

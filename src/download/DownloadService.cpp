@@ -19,6 +19,7 @@ struct DownloadService::Task
     int urlIndex = 0;
     QNetworkReply* reply = nullptr;
     QFile* file = nullptr;
+    QTimer* watchdog = nullptr;
     qint64 received = 0;
 };
 
@@ -182,12 +183,17 @@ void DownloadService::startUrl(Task* task)
 
     task->reply = m_nam->get(request);
 
-    // 镜像可能接受连接后一直不响应；60 秒无完成则中止并走下一个 URL。
-    QNetworkReply* reply = task->reply;
-    QTimer::singleShot(60000, reply, [reply]() {
-        if (reply != nullptr && reply->isRunning())
-            reply->abort();
-    });
+    // 空闲超时：收到任何数据就重新计时，避免大文件在慢速镜像上被误杀。
+    if (task->watchdog == nullptr)
+    {
+        task->watchdog = new QTimer(this);
+        task->watchdog->setSingleShot(true);
+        connect(task->watchdog, &QTimer::timeout, this, [task]() {
+            if (task->reply != nullptr && task->reply->isRunning())
+                task->reply->abort();
+        });
+    }
+    task->watchdog->start(60000);
 
     connect(task->reply, &QNetworkReply::readyRead, this, [this, task]() {
         if (task->reply == nullptr || task->file == nullptr)
@@ -196,6 +202,9 @@ void DownloadService::startUrl(Task* task)
         const QByteArray data = task->reply->readAll();
         if (data.isEmpty())
             return;
+
+        if (task->watchdog != nullptr)
+            task->watchdog->start(60000);
 
         const qint64 written = task->file->write(data);
         if (written != data.size())
@@ -218,6 +227,9 @@ void DownloadService::handleReplyFinished(Task* task)
 {
     if (task->reply == nullptr)
         return;
+
+    if (task->watchdog != nullptr)
+        task->watchdog->stop();
 
     QNetworkReply* reply = task->reply;
     task->reply = nullptr;
@@ -318,6 +330,9 @@ void DownloadService::failAttempt(Task* task, const QString& error)
         m_received = 0;
     task->received = 0;
 
+    if (task->watchdog != nullptr)
+        task->watchdog->stop();
+
     if (task->reply != nullptr)
     {
         QNetworkReply* reply = task->reply;
@@ -369,6 +384,13 @@ void DownloadService::cleanupTask(Task* task)
 {
     if (task == nullptr)
         return;
+
+    if (task->watchdog != nullptr)
+    {
+        task->watchdog->stop();
+        delete task->watchdog;
+        task->watchdog = nullptr;
+    }
 
     if (task->reply != nullptr)
     {

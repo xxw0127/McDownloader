@@ -77,7 +77,10 @@ AppController::AppController(QObject* parent)
 AppController::~AppController()
 {
     if (m_installController != nullptr)
+    {
         m_installController->requestCancel();
+        QMetaObject::invokeMethod(m_installController, "cancel", Qt::QueuedConnection);
+    }
 
     if (m_installThread != nullptr)
     {

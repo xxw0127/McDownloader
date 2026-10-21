@@ -112,7 +112,10 @@ bool writeLauncherProfiles(const QString& minecraftDir, QString* error)
     return true;
 }
 
-bool downloadFile(const QList<QUrl>& urls, const QString& target, QString* error)
+bool downloadFile(const QList<QUrl>& urls,
+                  const QString& target,
+                  QString* error,
+                  const std::atomic_bool* cancelFlag = nullptr)
 {
     if (!QDir().mkpath(QFileInfo(target).absolutePath()))
     {
@@ -124,6 +127,12 @@ bool downloadFile(const QList<QUrl>& urls, const QString& target, QString* error
     QString lastError;
     for (const QUrl& url : urls)
     {
+        if (cancelFlag != nullptr && cancelFlag->load())
+        {
+            *error = QStringLiteral("canceled");
+            return false;
+        }
+
         QNetworkRequest request(url);
         request.setAttribute(QNetworkRequest::RedirectPolicyAttribute,
                              QNetworkRequest::NoLessSafeRedirectPolicy);
@@ -150,6 +159,12 @@ bool downloadFile(const QList<QUrl>& urls, const QString& target, QString* error
         const QString netText = reply->errorString();
         reply->deleteLater();
 
+        if (cancelFlag != nullptr && cancelFlag->load())
+        {
+            *error = QStringLiteral("canceled");
+            return false;
+        }
+
         if (netError != QNetworkReply::NoError || status < 200 || status >= 300 || body.isEmpty())
         {
             lastError = QStringLiteral("%1（HTTP %2，%3）").arg(url.toString()).arg(status).arg(netText);
@@ -171,7 +186,8 @@ bool downloadFile(const QList<QUrl>& urls, const QString& target, QString* error
 
 bool prepareInstallerLibraries(const QString& installerPath,
                                const QString& stagingMinecraft,
-                               QString* error)
+                               QString* error,
+                               const std::atomic_bool* cancelFlag = nullptr)
 {
     ZipExtractor zip(installerPath);
     if (!zip.isValid())
@@ -196,6 +212,12 @@ bool prepareInstallerLibraries(const QString& installerPath,
                                                           QStringLiteral("neoforge-installer"));
     for (const FileSpec& file : plan.files)
     {
+        if (cancelFlag != nullptr && cancelFlag->load())
+        {
+            *error = QStringLiteral("canceled");
+            return false;
+        }
+
         bool ok = false;
         const QString target = Paths::joinWithin(stagingMinecraft, file.targetRelativePath, &ok);
         if (!ok)
@@ -438,7 +460,7 @@ NeoForgeInstallResult NeoForgeInstaller::install(const QString& minecraftDir,
         return fail(error);
 
     const QString installer = QDir(staging.path()).filePath(QStringLiteral("neoforge-installer.jar"));
-    if (!downloadFile(installerUrls(mcVersion, loaderVersion), installer, &error))
+    if (!downloadFile(installerUrls(mcVersion, loaderVersion), installer, &error, cancelFlag))
         return fail(error);
 
     // 安装器会重新检查全部库；把已有库复制进 staging，避免官方 Maven 超时。
@@ -452,7 +474,7 @@ NeoForgeInstallResult NeoForgeInstaller::install(const QString& minecraftDir,
     }
 
     // NeoForge 安装器的 --mirror 不会覆盖处理器库；先把 install_profile 的库全部下好。
-    if (!prepareInstallerLibraries(installer, staging.minecraftPath(), &error))
+    if (!prepareInstallerLibraries(installer, staging.minecraftPath(), &error, cancelFlag))
         return fail(error);
 
     QString java = javaPath;

@@ -12,6 +12,7 @@ private slots:
     void backsUpExistingVersion();
     void mergesLibraries();
     void cleanupRemovesStaging();
+    void rollbackRestoresVersionOnLibraryFailure();
 };
 
 #endif // TST_STAGING_H

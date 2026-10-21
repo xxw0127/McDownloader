@@ -12,6 +12,7 @@ private slots:
     void capturesStdout();
     void timesOut();
     void reportsMissingExecutable();
+    void cancelStopsRunningProcess();
 };
 
 #endif // TST_PROCESS_H

@@ -2,6 +2,10 @@
 
 #include <QProcessEnvironment>
 
+#include <atomic>
+#include <chrono>
+#include <thread>
+
 #include "installers/ProcessRunner.h"
 #include "platform/PlatformProcess.h"
 
@@ -47,4 +51,25 @@ void TstProcess::reportsMissingExecutable()
         1000);
     QCOMPARE(result.exitCode, -1);
     QVERIFY(!result.stdErr.isEmpty());
+}
+
+void TstProcess::cancelStopsRunningProcess()
+{
+    std::atomic_bool cancel{false};
+    std::thread canceler([&cancel]() {
+        std::this_thread::sleep_for(std::chrono::milliseconds(250));
+        cancel.store(true);
+    });
+
+    const ProcessResult result = ProcessRunner::run(
+        PlatformProcess::cmdExecutable(),
+        {QStringLiteral("/c"), QStringLiteral("ping"), QStringLiteral("127.0.0.1"),
+         QStringLiteral("-n"), QStringLiteral("10"), QStringLiteral(">"), QStringLiteral("nul")},
+        QProcessEnvironment(),
+        10000,
+        &cancel);
+
+    canceler.join();
+    QVERIFY(result.canceled);
+    QVERIFY(!result.timedOut);
 }
