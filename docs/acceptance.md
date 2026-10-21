@@ -127,3 +127,8 @@ powershell -ExecutionPolicy Bypass -File scripts\prepare-pcl2-sandbox.ps1 -Force
 - Forge 1.12.2 使用安装器 ZIP 内 `version.json` + `maven/` 手动安装，不运行 processors；已实测可进入主菜单。
 - NeoForge 1.21.1 安装器需要 Java 21，并且处理器库必须能下载；安装器会先从 BMCLAPI 预下载 `install_profile.json` 中的库，失败会给出明确错误。
 - 未构建 Android 版本；QML 与核心层已按可移植方式拆分。
+- 覆盖已有版本时自动备份，不提供交互式确认。
+- 下载使用空闲超时 + 镜像 URL 回退；未实现同一 URL 的多次指数退避重试。
+- 安装路径的 manifest 先取 BMCLAPI，缺失后再取官方；没有像 UI 那样并行合并两份清单。
+- 没有跨进程安装锁，两个实例同时写同一 `.minecraft` 仍需避免。
+- Java 需要用户准备或通过脚本准备；安装器负责检测、校验和绑定，不自动下载 JDK/JRE。
