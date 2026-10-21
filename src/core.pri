@@ -15,6 +15,11 @@ HEADERS += \
     $$PWD/download/DownloadService.h \
     $$PWD/download/JsonFetcher.h \
     $$PWD/download/MirrorResolver.h \
+    $$PWD/core/JsonRules.h \
+    $$PWD/installers/InstallPlan.h \
+    $$PWD/installers/LibraryResolver.h \
+    $$PWD/installers/AssetResolver.h \
+    $$PWD/installers/VanillaPlanBuilder.h \
     $$PWD/platform/PlatformPaths.h
 
 SOURCES += \
@@ -28,4 +33,8 @@ SOURCES += \
     $$PWD/download/DownloadService.cpp \
     $$PWD/download/JsonFetcher.cpp \
     $$PWD/download/MirrorResolver.cpp \
+    $$PWD/core/JsonRules.cpp \
+    $$PWD/installers/LibraryResolver.cpp \
+    $$PWD/installers/AssetResolver.cpp \
+    $$PWD/installers/VanillaPlanBuilder.cpp \
     $$PWD/platform/PlatformPaths.cpp

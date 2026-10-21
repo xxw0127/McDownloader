@@ -1,0 +1,93 @@
+{
+  "id": "1.20.1",
+  "type": "release",
+  "downloads": {
+    "client": {
+      "sha1": "1111111111111111111111111111111111111111",
+      "size": 12345,
+      "url": "https://piston-data.mojang.com/v1/objects/111/client.jar"
+    }
+  },
+  "assetIndex": {
+    "id": "5",
+    "sha1": "2222222222222222222222222222222222222222",
+    "size": 456,
+    "url": "https://piston-meta.mojang.com/v1/packages/222/5.json"
+  },
+  "assets": "5",
+  "logging": {
+    "client": {
+      "argument": "-Dlog4j.configurationFile=${path}",
+      "file": {
+        "id": "client-1.12.xml",
+        "sha1": "3333333333333333333333333333333333333333",
+        "size": 789,
+        "url": "https://piston-data.mojang.com/v1/objects/333/client.xml"
+      },
+      "type": "log4j2-xml"
+    }
+  },
+  "libraries": [
+    {
+      "name": "com.example:windows-only:1.0",
+      "downloads": {
+        "artifact": {
+          "path": "com/example/windows-only/1.0/windows-only-1.0.jar",
+          "sha1": "4444444444444444444444444444444444444444",
+          "size": 100,
+          "url": "https://libraries.minecraft.net/com/example/windows-only/1.0/windows-only-1.0.jar"
+        }
+      },
+      "rules": [
+        { "action": "allow", "os": { "name": "windows" } }
+      ]
+    },
+    {
+      "name": "com.example:osx-only:1.0",
+      "downloads": {
+        "artifact": {
+          "path": "com/example/osx-only/1.0/osx-only-1.0.jar",
+          "sha1": "5555555555555555555555555555555555555555",
+          "size": 101,
+          "url": "https://libraries.minecraft.net/com/example/osx-only/1.0/osx-only-1.0.jar"
+        }
+      },
+      "rules": [
+        { "action": "allow", "os": { "name": "osx" } }
+      ]
+    },
+    {
+      "name": "com.example:native:1.0",
+      "downloads": {
+        "classifiers": {
+          "natives-windows": {
+            "path": "com/example/native/1.0/native-1.0-natives-windows.jar",
+            "sha1": "6666666666666666666666666666666666666666",
+            "size": 102,
+            "url": "https://libraries.minecraft.net/com/example/native/1.0/native-1.0-natives-windows.jar"
+          }
+        }
+      },
+      "natives": {
+        "windows": "natives-windows"
+      }
+    },
+    {
+      "name": "net.minecraft:launchwrapper:1.12",
+      "rules": [
+        { "action": "allow", "os": { "name": "windows" } }
+      ]
+    },
+    {
+      "name": "com.example:no-rules:1.0",
+      "downloads": {
+        "artifact": {
+          "path": "com/example/no-rules/1.0/no-rules-1.0.jar",
+          "sha1": "7777777777777777777777777777777777777777",
+          "size": 103,
+          "url": "https://libraries.minecraft.net/com/example/no-rules/1.0/no-rules-1.0.jar"
+        }
+      }
+    }
+  ]
+}

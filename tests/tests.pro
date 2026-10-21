@@ -20,6 +20,7 @@ HEADERS += \
     $$PWD/tst_download.h \
     $$PWD/tst_jsonfetcher.h \
     $$PWD/tst_mirror.h \
+    $$PWD/tst_vanilla.h \
     $$PWD/TestHttpServer.h \
     $$PWD/../src/AppController.h
 
@@ -33,5 +34,6 @@ SOURCES += \
     $$PWD/tst_download.cpp \
     $$PWD/tst_jsonfetcher.cpp \
     $$PWD/tst_mirror.cpp \
+    $$PWD/tst_vanilla.cpp \
     $$PWD/TestHttpServer.cpp \
     $$PWD/../src/AppController.cpp

@@ -7,6 +7,7 @@
 #include "tst_logger.h"
 #include "tst_mirror.h"
 #include "tst_paths.h"
+#include "tst_vanilla.h"
 #include "tst_version.h"
 #include "tst_versionlistmodel.h"
 
@@ -68,6 +69,10 @@ int main(int argc, char *argv[])
     {
         TstMirror test;
         status |= runSuite(&test, QStringLiteral("mirror"), argc, argv);
+    }
+    {
+        TstVanilla test;
+        status |= runSuite(&test, QStringLiteral("vanilla"), argc, argv);
     }
     return status;
 }

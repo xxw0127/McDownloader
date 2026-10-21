@@ -1,0 +1,10 @@
+{
+  "id": "1.7.10",
+  "type": "release",
+  "assets": "legacy",
+  "libraries": [
+    {
+      "name": "net.minecraft:launchwrapper:1.12"
+    }
+  ]
+}
