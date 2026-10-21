@@ -30,8 +30,25 @@ Rectangle {
 
         FlatComboBox {
             Layout.fillWidth: true
-            model: ["原版"]
-            onActivated: app.loaderKind = "vanilla"
+            model: ["原版", "Fabric", "Quilt"]
+            currentIndex: app.loaderKind === "fabric" ? 1 : (app.loaderKind === "quilt" ? 2 : 0)
+            onActivated: app.loaderKind = index === 1 ? "fabric" : (index === 2 ? "quilt" : "vanilla")
+        }
+
+        Text {
+            visible: app.loaderKind !== "vanilla"
+            text: "加载器版本"
+            font.pixelSize: 11
+            color: "#6B7280"
+        }
+
+        FlatComboBox {
+            visible: app.loaderKind !== "vanilla"
+            Layout.fillWidth: true
+            model: app.loaderModel
+            textRole: "version"
+            currentIndex: 0
+            onActivated: app.loaderVersion = currentText
         }
 
         Text {

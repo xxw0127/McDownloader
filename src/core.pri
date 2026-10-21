@@ -24,6 +24,8 @@ HEADERS += \
     $$PWD/installers/VanillaPlanBuilder.h \
     $$PWD/installers/VanillaInstallValidator.h \
     $$PWD/installers/InstallController.h \
+    $$PWD/installers/LoaderCatalog.h \
+    $$PWD/installers/ProfileInstaller.h \
     $$PWD/platform/PlatformPaths.h
 
 SOURCES += \
@@ -45,4 +47,6 @@ SOURCES += \
     $$PWD/installers/VanillaPlanBuilder.cpp \
     $$PWD/installers/VanillaInstallValidator.cpp \
     $$PWD/installers/InstallController.cpp \
+    $$PWD/installers/LoaderCatalog.cpp \
+    $$PWD/installers/ProfileInstaller.cpp \
     $$PWD/platform/PlatformPaths.cpp

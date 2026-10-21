@@ -8,6 +8,7 @@
 #include <QNetworkRequest>
 
 #include "core/Checksum.h"
+#include "core/Logger.h"
 #include "core/Paths.h"
 
 struct DownloadService::Task
@@ -233,6 +234,11 @@ void DownloadService::handleReplyFinished(Task* task)
 
     if (error != QNetworkReply::NoError || status < 200 || status >= 300)
     {
+        Logger::warn(QStringLiteral("download"),
+                     QStringLiteral("URL 失败：%1（HTTP %2，%3）")
+                         .arg(task->spec.urls.at(task->urlIndex).toString())
+                         .arg(status)
+                         .arg(errorText));
         failAttempt(task, QStringLiteral("下载失败：%1（HTTP %2，%3）")
                               .arg(task->spec.urls.at(task->urlIndex).toString())
                               .arg(status)

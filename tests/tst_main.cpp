@@ -6,6 +6,7 @@
 #include "tst_download.h"
 #include "tst_installcontroller.h"
 #include "tst_jsonfetcher.h"
+#include "tst_loader.h"
 #include "tst_logger.h"
 #include "tst_mirror.h"
 #include "tst_paths.h"
@@ -83,6 +84,10 @@ int main(int argc, char *argv[])
     {
         TstAppController test;
         status |= runSuite(&test, QStringLiteral("appcontroller"), argc, argv);
+    }
+    {
+        TstLoader test;
+        status |= runSuite(&test, QStringLiteral("loader"), argc, argv);
     }
     return status;
 }

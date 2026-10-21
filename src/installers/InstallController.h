@@ -45,7 +45,16 @@ private:
         Manifest,
         VersionJson,
         AssetIndex,
-        Downloading
+        DownloadingVanilla,
+        LoaderIndex,
+        LoaderProfile,
+        DownloadingLoader
+    };
+
+    enum class DownloadPhase
+    {
+        Vanilla,
+        Loader
     };
 
     void handleJsonFinished(const QByteArray& body);
@@ -55,9 +64,12 @@ private:
     void handleDownloadFailed(const QString& error);
     void handleDownloadCanceled();
     void startDownload();
+    void startLoaderPhase();
     bool writeVersionJson(QString* error);
+    bool writeJsonObject(const QString& versionId, const QJsonObject& object, QString* error);
     bool writeLauncherProfiles(QString* error);
     bool applyCopies(QString* error);
+    void finishInstall();
     void fail(const QString& error);
 
     JsonFetcher* m_jsonFetcher = nullptr;
@@ -66,10 +78,13 @@ private:
     InstallPlan m_plan;
     QJsonObject m_versionJson;
     QJsonObject m_assetIndex;
+    QJsonObject m_loaderProfile;
     QUrl m_versionUrl;
     QString m_minecraftDir;
     QString m_versionId;
+    QString m_loaderId;
     Stage m_stage = Stage::Idle;
+    DownloadPhase m_downloadPhase = DownloadPhase::Vanilla;
     bool m_canceled = false;
 };
 

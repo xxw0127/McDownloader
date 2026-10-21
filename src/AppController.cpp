@@ -16,6 +16,7 @@
 #include "core/VersionManifest.h"
 #include "download/JsonFetcher.h"
 #include "download/MirrorResolver.h"
+#include "installers/LoaderCatalog.h"
 #include "models/LoaderListModel.h"
 #include "models/VersionListModel.h"
 
@@ -65,6 +66,10 @@ AppController::AppController(QObject* parent)
         m_mojangDone = true;
         tryFinishManifest();
     });
+
+    m_loaderFetcher = new JsonFetcher(this);
+    connect(m_loaderFetcher, &JsonFetcher::finished, this, &AppController::handleLoaderIndexFinished);
+    connect(m_loaderFetcher, &JsonFetcher::failed, this, &AppController::handleLoaderIndexFailed);
 }
 
 AppController::~AppController()
@@ -115,6 +120,9 @@ void AppController::setSelectedVersion(const QString& versionId)
     m_versionModel->setSelectedId(versionId);
     emit selectedVersionChanged();
     emit latestChanged();
+
+    if (loaderKindFromName(m_loaderKind) != LoaderKind::Vanilla)
+        refreshLoaderVersions();
 }
 
 QString AppController::minecraftDir() const
@@ -157,8 +165,17 @@ void AppController::setLoaderKind(const QString& kind)
 
     m_loaderKind = normalized;
     m_loaderVersion.clear();
+    m_loaderModel->setVersions({});
     emit loaderKindChanged();
     emit loaderVersionChanged();
+
+    if (loaderKindFromName(m_loaderKind) == LoaderKind::Vanilla)
+    {
+        setStatus(QStringLiteral("已选择原版"));
+        return;
+    }
+
+    refreshLoaderVersions();
 }
 
 QString AppController::loaderVersion() const
@@ -356,6 +373,58 @@ void AppController::setStatus(const QString& status)
         return;
     m_statusText = status;
     emit statusTextChanged();
+}
+
+void AppController::refreshLoaderVersions()
+{
+    const LoaderKind kind = loaderKindFromName(m_loaderKind);
+    if (kind == LoaderKind::Vanilla)
+    {
+        m_loaderModel->setVersions({});
+        setLoaderVersion(QString());
+        return;
+    }
+
+    if (m_selectedVersion.isEmpty())
+    {
+        setStatus(QStringLiteral("请先选择 Minecraft 版本"));
+        return;
+    }
+
+    const QList<QUrl> urls = LoaderCatalog::indexUrls(kind, m_selectedVersion);
+    if (urls.isEmpty())
+    {
+        setStatus(QStringLiteral("该加载器没有可用的版本列表"));
+        return;
+    }
+
+    setStatus(QStringLiteral("正在获取 %1 版本...").arg(loaderKindName(kind)));
+    m_loaderFetcher->fetch(urls, 20000);
+}
+
+void AppController::handleLoaderIndexFinished(const QByteArray& body)
+{
+    const LoaderKind kind = loaderKindFromName(m_loaderKind);
+    QString error;
+    const QVector<LoaderVersion> versions = LoaderCatalog::parseIndex(kind, body, m_selectedVersion, &error);
+    if (!error.isEmpty() || versions.isEmpty())
+    {
+        m_loaderModel->setVersions({});
+        setLoaderVersion(QString());
+        setStatus(error.isEmpty() ? QStringLiteral("没有可用的加载器版本") : error);
+        return;
+    }
+
+    m_loaderModel->setVersions(versions);
+    setLoaderVersion(versions.first().version);
+    setStatus(QStringLiteral("已加载 %1 个 %2 版本").arg(versions.size()).arg(loaderKindName(kind)));
+}
+
+void AppController::handleLoaderIndexFailed(const QString& error)
+{
+    m_loaderModel->setVersions({});
+    setLoaderVersion(QString());
+    setStatus(QStringLiteral("加载器列表获取失败：%1").arg(error));
 }
 
 void AppController::tryFinishManifest()

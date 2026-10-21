@@ -79,6 +79,9 @@ private:
     VersionInfo latestOfGroup(VersionGroup group) const;
     void setStatus(const QString& status);
     void tryFinishManifest();
+    void refreshLoaderVersions();
+    void handleLoaderIndexFinished(const QByteArray& body);
+    void handleLoaderIndexFailed(const QString& error);
     void handleInstallProgress(qint64 received, qint64 total, const QString& currentFile);
     void handleInstallFinished(const QString& versionId);
     void handleInstallFailed(const QString& message);
@@ -101,6 +104,7 @@ private:
 
     JsonFetcher* m_bmclapiFetcher = nullptr;
     JsonFetcher* m_mojangFetcher = nullptr;
+    JsonFetcher* m_loaderFetcher = nullptr;
     QByteArray m_bmclapiBody;
     QByteArray m_mojangBody;
     bool m_bmclapiDone = false;

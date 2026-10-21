@@ -23,6 +23,7 @@ HEADERS += \
     $$PWD/tst_vanilla.h \
     $$PWD/tst_installcontroller.h \
     $$PWD/tst_appcontroller.h \
+    $$PWD/tst_loader.h \
     $$PWD/TestHttpServer.h \
     $$PWD/../src/AppController.h
 
@@ -39,5 +40,6 @@ SOURCES += \
     $$PWD/tst_vanilla.cpp \
     $$PWD/tst_installcontroller.cpp \
     $$PWD/tst_appcontroller.cpp \
+    $$PWD/tst_loader.cpp \
     $$PWD/TestHttpServer.cpp \
     $$PWD/../src/AppController.cpp

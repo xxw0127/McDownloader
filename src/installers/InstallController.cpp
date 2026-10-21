@@ -13,6 +13,8 @@
 #include "download/JsonFetcher.h"
 #include "download/MirrorResolver.h"
 #include "installers/InstallPlan.h"
+#include "installers/LoaderCatalog.h"
+#include "installers/ProfileInstaller.h"
 #include "installers/VanillaInstallValidator.h"
 #include "installers/VanillaPlanBuilder.h"
 
@@ -42,7 +44,9 @@ void InstallController::start(const InstallRequest& request)
         return;
     }
 
-    if (request.loader != LoaderKind::Vanilla)
+    if (request.loader != LoaderKind::Vanilla &&
+        request.loader != LoaderKind::Fabric &&
+        request.loader != LoaderKind::Quilt)
     {
         emit failed(QStringLiteral("该加载器尚未实现：%1").arg(loaderKindName(request.loader)));
         return;
@@ -72,8 +76,11 @@ void InstallController::start(const InstallRequest& request)
     m_versionId = request.mcVersion;
     m_versionJson = QJsonObject();
     m_assetIndex = QJsonObject();
+    m_loaderProfile = QJsonObject();
+    m_loaderId.clear();
     m_plan = InstallPlan();
     m_canceled = false;
+    m_downloadPhase = DownloadPhase::Vanilla;
     m_stage = Stage::Manifest;
 
     m_jsonFetcher->fetch(MirrorResolver::manifestUrls(), 20000);
@@ -85,7 +92,7 @@ void InstallController::cancel()
         return;
 
     m_canceled = true;
-    if (m_stage == Stage::Downloading)
+    if (m_stage == Stage::DownloadingVanilla || m_stage == Stage::DownloadingLoader)
     {
         m_downloadService->cancel();
         return;
@@ -174,6 +181,67 @@ void InstallController::handleJsonFinished(const QByteArray& body)
 
         m_assetIndex = document.object();
         startDownload();
+        return;
+    }
+
+    if (m_stage == Stage::LoaderIndex)
+    {
+        QString error;
+        const QVector<LoaderVersion> versions = LoaderCatalog::parseIndex(m_request.loader,
+                                                                         body,
+                                                                         m_versionId,
+                                                                         &error);
+        if (!error.isEmpty() || versions.isEmpty())
+        {
+            fail(error.isEmpty() ? QStringLiteral("没有可用的加载器版本") : error);
+            return;
+        }
+
+        m_request.loaderVersion = versions.first().version;
+        const QList<QUrl> urls = LoaderCatalog::profileUrls(m_request.loader,
+                                                            m_versionId,
+                                                            m_request.loaderVersion);
+        if (urls.isEmpty())
+        {
+            fail(QStringLiteral("加载器 profile 地址为空"));
+            return;
+        }
+
+        m_stage = Stage::LoaderProfile;
+        m_jsonFetcher->fetch(urls, 20000);
+        return;
+    }
+
+    if (m_stage == Stage::LoaderProfile)
+    {
+        m_loaderId = ProfileInstaller::instanceId(m_request.loader,
+                                                  m_versionId,
+                                                  m_request.loaderVersion);
+        if (m_loaderId.isEmpty())
+        {
+            fail(QStringLiteral("无法生成加载器实例名"));
+            return;
+        }
+
+        QString error;
+        const QJsonObject profile = ProfileInstaller::prepareProfile(body, m_loaderId, &error);
+        if (!error.isEmpty())
+        {
+            fail(error);
+            return;
+        }
+
+        if (!writeJsonObject(m_loaderId, profile, &error))
+        {
+            fail(error);
+            return;
+        }
+
+        m_loaderProfile = profile;
+        m_plan = ProfileInstaller::buildPlan(profile, m_minecraftDir, m_loaderId);
+        m_downloadPhase = DownloadPhase::Loader;
+        m_stage = Stage::DownloadingLoader;
+        m_downloadService->start(m_minecraftDir, m_plan.files);
     }
 }
 
@@ -195,10 +263,25 @@ void InstallController::handleDownloadFinished()
         return;
 
     QString error;
-    if (!applyCopies(&error) || !writeLauncherProfiles(&error))
+    if (!writeLauncherProfiles(&error))
     {
         fail(error);
         return;
+    }
+
+    if (m_downloadPhase == DownloadPhase::Vanilla)
+    {
+        if (!applyCopies(&error))
+        {
+            fail(error);
+            return;
+        }
+
+        if (m_request.loader != LoaderKind::Vanilla)
+        {
+            startLoaderPhase();
+            return;
+        }
     }
 
     const QString validation = VanillaInstallValidator::validate(m_minecraftDir, m_versionId);
@@ -208,8 +291,27 @@ void InstallController::handleDownloadFinished()
         return;
     }
 
-    m_stage = Stage::Idle;
-    emit finished(m_versionId);
+    if (m_request.loader != LoaderKind::Vanilla && !m_loaderId.isEmpty())
+    {
+        bool ok = false;
+        const QString loaderPath = Paths::joinWithin(m_minecraftDir,
+                                                     QStringLiteral("versions/%1/%1.json").arg(m_loaderId),
+                                                     &ok);
+        if (!ok || !QFileInfo::exists(loaderPath))
+        {
+            fail(QStringLiteral("加载器版本 JSON 不存在：%1").arg(m_loaderId));
+            return;
+        }
+
+        QFile loaderFile(loaderPath);
+        if (!loaderFile.open(QIODevice::ReadOnly) || !QJsonDocument::fromJson(loaderFile.readAll()).isObject())
+        {
+            fail(QStringLiteral("加载器版本 JSON 无效：%1").arg(m_loaderId));
+            return;
+        }
+    }
+
+    finishInstall();
 }
 
 void InstallController::handleDownloadFailed(const QString& error)
@@ -236,14 +338,49 @@ void InstallController::startDownload()
         return;
     }
 
-    m_stage = Stage::Downloading;
+    m_downloadPhase = DownloadPhase::Vanilla;
+    m_stage = Stage::DownloadingVanilla;
     m_downloadService->start(m_minecraftDir, m_plan.files);
+}
+
+void InstallController::startLoaderPhase()
+{
+    if (m_request.loaderVersion.isEmpty())
+    {
+        const QList<QUrl> urls = LoaderCatalog::indexUrls(m_request.loader, m_versionId);
+        if (urls.isEmpty())
+        {
+            fail(QStringLiteral("没有可用的加载器列表地址"));
+            return;
+        }
+
+        m_stage = Stage::LoaderIndex;
+        m_jsonFetcher->fetch(urls, 20000);
+        return;
+    }
+
+    const QList<QUrl> urls = LoaderCatalog::profileUrls(m_request.loader,
+                                                        m_versionId,
+                                                        m_request.loaderVersion);
+    if (urls.isEmpty())
+    {
+        fail(QStringLiteral("没有可用的加载器 profile 地址"));
+        return;
+    }
+
+    m_stage = Stage::LoaderProfile;
+    m_jsonFetcher->fetch(urls, 20000);
 }
 
 bool InstallController::writeVersionJson(QString* error)
 {
+    return writeJsonObject(m_versionId, m_versionJson, error);
+}
+
+bool InstallController::writeJsonObject(const QString& versionId, const QJsonObject& object, QString* error)
+{
     bool ok = false;
-    const QString relative = QStringLiteral("versions/%1/%1.json").arg(m_versionId);
+    const QString relative = QStringLiteral("versions/%1/%1.json").arg(versionId);
     const QString target = Paths::joinWithin(m_minecraftDir, relative, &ok);
     if (!ok)
     {
@@ -264,7 +401,7 @@ bool InstallController::writeVersionJson(QString* error)
         return false;
     }
 
-    file.write(QJsonDocument(m_versionJson).toJson(QJsonDocument::Indented));
+    file.write(QJsonDocument(object).toJson(QJsonDocument::Indented));
     if (!file.commit())
     {
         *error = QStringLiteral("提交版本 JSON 失败：%1").arg(target);
@@ -272,6 +409,12 @@ bool InstallController::writeVersionJson(QString* error)
     }
 
     return true;
+}
+
+void InstallController::finishInstall()
+{
+    m_stage = Stage::Idle;
+    emit finished(m_loaderId.isEmpty() ? m_versionId : m_loaderId);
 }
 
 bool InstallController::writeLauncherProfiles(QString* error)
