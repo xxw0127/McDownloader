@@ -29,7 +29,7 @@ powershell -ExecutionPolicy Bypass -File scripts\run-tests.ps1 -Network
 输出：
 
 - 程序：`build\release\McDownloader.exe`
-- 分发包：`dist\McDownloader-win64.zip`
+- 分发包：`dist\McDownloader-win64.zip`（解压后只有一个顶层 `McDownloader` 文件夹）
 
 本机 Qt 的插件元数据会被 windeployqt 误判为 debug；构建脚本保留 windeployqt 尝试，并自动手工部署 release DLL、QML 和平台插件。
 

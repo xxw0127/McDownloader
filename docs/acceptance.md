@@ -36,7 +36,7 @@ powershell -ExecutionPolicy Bypass -File scripts\run-tests.ps1 -Network
 - QtTest 18 个套件全部通过（138 个测试/含 init/cleanup；路径、SHA1、日志、版本分组、下载、镜像、JSON、原版计划、安装校验、AppController、Fabric/Quilt、Java、进程、Staging、Forge、Legacy Forge、NeoForge）。
 - 网络测试覆盖 BMCLAPI → Mojang 回退、请求超时和镜像失败回退；302 重定向未做自动化测试。
 - 构建产物：`build\release\McDownloader.exe`
-- 打包产物：`dist\McDownloader-win64.zip`
+- 打包产物：`dist\McDownloader-win64.zip`（解压后只有一个顶层 `McDownloader` 文件夹）
 
 ## Java 版本策略
 

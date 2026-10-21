@@ -110,7 +110,8 @@ if ($Package) {
         Where-Object { $_.Name -ne 'logs' } |
         ForEach-Object { Copy-Item $_.FullName $stage -Recurse -Force }
 
-    Compress-Archive -Path (Join-Path $stage '*') -DestinationPath $zip -Force
+    # 保留顶层 McDownloader 目录，解压后不会把 Qt/QML 子目录散落在下载目录。
+    Compress-Archive -Path $stage -DestinationPath $zip -Force
     Write-Host "打包完成：$zip"
 }
 
