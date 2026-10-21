@@ -70,6 +70,29 @@ QJsonObject ProfileInstaller::prepareProfile(const QByteArray& raw, const QStrin
     }
 
     profile.insert(QStringLiteral("id"), id);
+
+    // Quilt 0.20 profile 没有声明 launchwrapper，但它的 Mixin 兼容层仍会引用。
+    if (id.startsWith(QLatin1String("quilt-loader-")))
+    {
+        QJsonArray libraries = profile.value(QStringLiteral("libraries")).toArray();
+        bool hasLaunchwrapper = false;
+        for (const QJsonValue& value : libraries)
+        {
+            if (value.toObject().value(QStringLiteral("name")).toString()
+                    .startsWith(QLatin1String("net.minecraft:launchwrapper:")))
+            {
+                hasLaunchwrapper = true;
+                break;
+            }
+        }
+        if (!hasLaunchwrapper)
+        {
+            libraries.append(QJsonObject{{QStringLiteral("name"),
+                                          QStringLiteral("net.minecraft:launchwrapper:1.12")}});
+            profile.insert(QStringLiteral("libraries"), libraries);
+        }
+    }
+
     if (error != nullptr)
         error->clear();
     return profile;

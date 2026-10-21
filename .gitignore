@@ -31,3 +31,6 @@ CMakeLists.txt.user
 logs/
 *.log
 config.ini
+
+# Distribution output
+dist/

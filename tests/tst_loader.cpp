@@ -112,6 +112,31 @@ void TstLoader::prepareProfileOverridesId()
     QCOMPARE(profile.value(QStringLiteral("inheritsFrom")).toString(), QStringLiteral("1.20.1"));
 }
 
+void TstLoader::prepareQuiltProfileAddsLaunchwrapper()
+{
+    const QByteArray raw = R"({
+        "id": "quilt-loader-0.20.0-beta.9-1.20.1",
+        "inheritsFrom": "1.20.1",
+        "libraries": [
+            {"name": "org.quiltmc:quilt-loader:0.20.0-beta.9", "url": "https://maven.quiltmc.org/repository/release/"}
+        ]
+    })";
+
+    QString error;
+    const QJsonObject profile = ProfileInstaller::prepareProfile(
+        raw, QStringLiteral("quilt-loader-0.20.0-beta.9-1.20.1"), &error);
+    QVERIFY(error.isEmpty());
+
+    bool found = false;
+    for (const QJsonValue& value : profile.value(QStringLiteral("libraries")).toArray())
+    {
+        if (value.toObject().value(QStringLiteral("name")).toString() ==
+            QStringLiteral("net.minecraft:launchwrapper:1.12"))
+            found = true;
+    }
+    QVERIFY(found);
+}
+
 void TstLoader::quiltLibraryPrefersOfficial()
 {
     const QByteArray raw = R"({

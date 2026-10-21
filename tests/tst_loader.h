@@ -16,6 +16,7 @@ private slots:
     void quiltProfileUrlHost();
     void instanceIds();
     void prepareProfileOverridesId();
+    void prepareQuiltProfileAddsLaunchwrapper();
     void buildPlanUsesMavenUrl();
     void quiltLibraryPrefersOfficial();
     void expandsArchPlaceholder();

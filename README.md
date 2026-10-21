@@ -15,22 +15,21 @@
 powershell -ExecutionPolicy Bypass -File scripts\check-env.ps1
 ```
 
-## 构建
+## 构建、测试、打包
 
 ```powershell
-cd build
-qmake ..\downloader.pro
-mingw32-make -j4
+# 构建 + windeployqt + zip
+powershell -ExecutionPolicy Bypass -File scripts\build.ps1 -Deploy -Package
+
+# 全量 QtTest（-Network 额外跑真实版本清单）
+powershell -ExecutionPolicy Bypass -File scripts\run-tests.ps1
+powershell -ExecutionPolicy Bypass -File scripts\run-tests.ps1 -Network
 ```
 
-## 测试
+输出：
 
-```powershell
-cd tests\build
-qmake ..\tests.pro
-mingw32-make -j4
-.\release\tst_main.exe
-```
+- 程序：`build\release\PCL2Downloader.exe`
+- 分发包：`dist\PCL2Downloader-win64.zip`
 
 ## 命令行安装（验收用）
 
@@ -38,24 +37,59 @@ mingw32-make -j4
 cd tools\installer-cli\build
 qmake ..\installer-cli.pro
 mingw32-make -j4
+
 .\release\installer-cli.exe --mc 1.20.1 --dir D:\PCL2-reverse\run\downloader-test\.minecraft --loader vanilla
+.\release\installer-cli.exe --mc 1.20.1 --dir ... --loader fabric
+.\release\installer-cli.exe --mc 1.20.1 --dir ... --loader quilt
+.\release\installer-cli.exe --mc 1.20.1 --dir ... --loader forge --loader-version 47.2.0
+.\release\installer-cli.exe --mc 1.20.1 --dir ... --loader neoforge --loader-version 47.1.106 --java <java17>\bin\java.exe
+.\release\installer-cli.exe --mc 1.21.1 --dir ... --loader neoforge --loader-version 21.1.80 --java <java21>\bin\java.exe
 ```
 
-网络集成测试需要显式开启：
+旧版 Forge：
 
 ```powershell
-$env:PCL2_RUN_NETWORK_TESTS = "1"
+.\release\installer-cli.exe --mc 1.7.10 --dir ... --loader forge --loader-version 10.13.4.1614
+.\release\installer-cli.exe --mc 1.12.2 --dir ... --loader forge --loader-version 14.23.5.2860
 ```
+
+## Java 版本
+
+安装器从版本 JSON 读取 `javaVersion.majorVersion`，并在安装完成后把对应 Java 绑定到实例：
+
+- `versions\<实例>\java`：指向 Java 根目录的目录链接；
+- `versions\<实例>\PCL\Setup.ini`：`VersionArgumentJavaV2:2` + `VersionArgumentJavaSelect`。
+
+这样 PCL2 会给 1.21.1 使用 Java 21，而不是全局默认的 Java 25。
+
+准备 Java：
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\prepare-java8.ps1
+powershell -ExecutionPolicy Bypass -File scripts\prepare-java21.ps1
+```
+
+## PCL2 沙箱
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\prepare-pcl2-sandbox.ps1 -Force -RegisterFolder
+```
+
+只复制 PCL2 程序与 `PCL` 配置目录，不修改原 `D:\PCL2`；测试目录会加入 PCL2 文件夹列表。
+
+完整验收矩阵和证据见 `docs\acceptance.md`。
 
 ## 目录
 
-- `src/core`：路径安全、校验、日志、版本模型与分组
+- `src/core`：路径安全、校验、日志、版本模型与分组、设置
 - `src/download`：下载队列、镜像规则、JSON 请求
-- `src/installers`：原版与各加载器的安装流程
+- `src/installers`：原版与各加载器安装、Java 选择、Staging、ZIP 解包
 - `src/models`：QML 使用的模型
 - `src/platform`：平台相关路径与进程
 - `qml`：界面
 - `tests`：QtTest 用例
 - `tools/installer-cli`：命令行安装入口，用于验收
+- `scripts`：构建、测试、Java/PCL2 沙箱准备
+- `third_party/miniz`：ZIP 解包
 
 设计稿与实施计划见上级仓库 `D:\PCL2-reverse\docs\superpowers\`。
