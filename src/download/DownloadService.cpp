@@ -174,7 +174,8 @@ void DownloadService::startUrl(Task* task)
 
     const QUrl url = task->spec.urls.at(task->urlIndex);
     QNetworkRequest request(url);
-    request.setAttribute(QNetworkRequest::FollowRedirectsAttribute, true);
+    request.setAttribute(QNetworkRequest::RedirectPolicyAttribute,
+                         QNetworkRequest::NoLessSafeRedirectPolicy);
     request.setHeader(QNetworkRequest::UserAgentHeader, QStringLiteral("PCL2Downloader/0.1"));
 
     task->reply = m_nam->get(request);

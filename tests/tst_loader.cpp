@@ -53,6 +53,22 @@ void TstLoader::parsesQuiltIndex()
     QCOMPARE(versions.first().version, QStringLiteral("0.23.1"));
 }
 
+void TstLoader::parsesForgeIndexNewestFirst()
+{
+    const QByteArray body = R"([
+        {"version": "47.2.0", "modified": "2023-09-21T10:54:04.000Z"},
+        {"version": "47.4.28", "modified": "2026-10-13T09:30:16.000Z"},
+        {"version": "47.3.0", "modified": "2024-01-01T00:00:00.000Z"}
+    ])";
+
+    QString error;
+    const QVector<LoaderVersion> versions = LoaderCatalog::parseIndex(LoaderKind::Forge, body,
+                                                                     QStringLiteral("1.20.1"), &error);
+    QVERIFY(error.isEmpty());
+    QCOMPARE(versions.size(), 3);
+    QCOMPARE(versions.first().version, QStringLiteral("47.4.28"));
+}
+
 void TstLoader::fabricProfileUrlKeepsBuildSuffix()
 {
     const QList<QUrl> urls = LoaderCatalog::profileUrls(LoaderKind::Fabric,

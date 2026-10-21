@@ -48,7 +48,8 @@ private:
         DownloadingVanilla,
         LoaderIndex,
         LoaderProfile,
-        DownloadingLoader
+        DownloadingLoader,
+        ForgeInstalling
     };
 
     enum class DownloadPhase
@@ -65,6 +66,7 @@ private:
     void handleDownloadCanceled();
     void startDownload();
     void startLoaderPhase();
+    void startForgeInstall();
     bool writeVersionJson(QString* error);
     bool writeJsonObject(const QString& versionId, const QJsonObject& object, QString* error);
     bool writeLauncherProfiles(QString* error);

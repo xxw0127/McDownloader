@@ -3,6 +3,9 @@
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QVersionNumber>
+
+#include <algorithm>
 
 namespace
 {
@@ -37,6 +40,10 @@ QList<QUrl> LoaderCatalog::indexUrls(LoaderKind kind, const QString& mcVersion)
     if (kind == LoaderKind::Quilt)
     {
         return {QUrl(QStringLiteral("https://meta.quiltmc.org/v3/versions/loader/%1").arg(mcVersion))};
+    }
+    if (kind == LoaderKind::Forge)
+    {
+        return {QUrl(QStringLiteral("https://bmclapi2.bangbang93.com/forge/minecraft/%1").arg(mcVersion))};
     }
     return {};
 }
@@ -118,6 +125,31 @@ QVector<LoaderVersion> LoaderCatalog::parseIndex(LoaderKind kind,
             if (!version.version.isEmpty())
                 result.append(version);
         }
+    }
+    else if (kind == LoaderKind::Forge)
+    {
+        if (!document.isArray())
+        {
+            setError(error, QStringLiteral("Forge 列表不是 JSON 数组"));
+            return {};
+        }
+
+        const QJsonArray loaders = document.array();
+        for (const QJsonValue& value : loaders)
+        {
+            const QJsonObject object = value.toObject();
+            LoaderVersion version;
+            version.version = object.value(QStringLiteral("version")).toString();
+            version.stable = QStringLiteral("forge");
+            version.released = QDateTime::fromString(object.value(QStringLiteral("modified")).toString(), Qt::ISODate);
+            if (!version.version.isEmpty())
+                result.append(version);
+        }
+
+        std::sort(result.begin(), result.end(), [](const LoaderVersion& left, const LoaderVersion& right) {
+            return QVersionNumber::compare(QVersionNumber::fromString(left.version),
+                                           QVersionNumber::fromString(right.version)) > 0;
+        });
     }
     else
     {

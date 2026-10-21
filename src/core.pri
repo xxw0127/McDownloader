@@ -26,7 +26,12 @@ HEADERS += \
     $$PWD/installers/InstallController.h \
     $$PWD/installers/LoaderCatalog.h \
     $$PWD/installers/ProfileInstaller.h \
-    $$PWD/platform/PlatformPaths.h
+    $$PWD/installers/ProcessRunner.h \
+    $$PWD/installers/JavaLocator.h \
+    $$PWD/installers/StagingArea.h \
+    $$PWD/installers/ForgeInstaller.h \
+    $$PWD/platform/PlatformPaths.h \
+    $$PWD/platform/PlatformProcess.h
 
 SOURCES += \
     $$PWD/core/Paths.cpp \
@@ -49,4 +54,9 @@ SOURCES += \
     $$PWD/installers/InstallController.cpp \
     $$PWD/installers/LoaderCatalog.cpp \
     $$PWD/installers/ProfileInstaller.cpp \
-    $$PWD/platform/PlatformPaths.cpp
+    $$PWD/installers/ProcessRunner.cpp \
+    $$PWD/installers/JavaLocator.cpp \
+    $$PWD/installers/StagingArea.cpp \
+    $$PWD/installers/ForgeInstaller.cpp \
+    $$PWD/platform/PlatformPaths.cpp \
+    $$PWD/platform/PlatformProcess.cpp

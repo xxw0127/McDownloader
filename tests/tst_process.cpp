@@ -1,0 +1,50 @@
+#include "tst_process.h"
+
+#include <QProcessEnvironment>
+
+#include "installers/ProcessRunner.h"
+#include "platform/PlatformProcess.h"
+
+void TstProcess::capturesExitCode()
+{
+    const ProcessResult result = ProcessRunner::run(
+        PlatformProcess::cmdExecutable(),
+        {QStringLiteral("/c"), QStringLiteral("exit"), QStringLiteral("3")},
+        QProcessEnvironment(),
+        5000);
+    QCOMPARE(result.exitCode, 3);
+    QVERIFY(!result.timedOut);
+}
+
+void TstProcess::capturesStdout()
+{
+    const ProcessResult result = ProcessRunner::run(
+        PlatformProcess::cmdExecutable(),
+        {QStringLiteral("/c"), QStringLiteral("echo"), QStringLiteral("hello")},
+        QProcessEnvironment(),
+        5000);
+    QCOMPARE(result.exitCode, 0);
+    QCOMPARE(result.stdOut.trimmed(), QStringLiteral("hello"));
+}
+
+void TstProcess::timesOut()
+{
+    const ProcessResult result = ProcessRunner::run(
+        PlatformProcess::cmdExecutable(),
+        {QStringLiteral("/c"), QStringLiteral("ping"), QStringLiteral("127.0.0.1"),
+         QStringLiteral("-n"), QStringLiteral("5"), QStringLiteral(">"), QStringLiteral("nul")},
+        QProcessEnvironment(),
+        200);
+    QVERIFY(result.timedOut);
+}
+
+void TstProcess::reportsMissingExecutable()
+{
+    const ProcessResult result = ProcessRunner::run(
+        QStringLiteral("Z:/definitely/not/here.exe"),
+        {},
+        QProcessEnvironment(),
+        1000);
+    QCOMPARE(result.exitCode, -1);
+    QVERIFY(!result.stdErr.isEmpty());
+}

@@ -11,6 +11,7 @@ private slots:
     void parsesFabricIndex();
     void rejectsUnsupportedFabricGame();
     void parsesQuiltIndex();
+    void parsesForgeIndexNewestFirst();
     void fabricProfileUrlKeepsBuildSuffix();
     void quiltProfileUrlHost();
     void instanceIds();

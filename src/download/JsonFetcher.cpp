@@ -68,7 +68,8 @@ void JsonFetcher::startNext()
 
     const QUrl url = m_urls.at(m_index);
     QNetworkRequest request(url);
-    request.setAttribute(QNetworkRequest::FollowRedirectsAttribute, true);
+    request.setAttribute(QNetworkRequest::RedirectPolicyAttribute,
+                         QNetworkRequest::NoLessSafeRedirectPolicy);
     request.setHeader(QNetworkRequest::UserAgentHeader, QStringLiteral("PCL2Downloader/0.1"));
 
     m_reply = m_nam->get(request);

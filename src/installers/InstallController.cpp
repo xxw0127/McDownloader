@@ -13,6 +13,7 @@
 #include "download/JsonFetcher.h"
 #include "download/MirrorResolver.h"
 #include "installers/InstallPlan.h"
+#include "installers/ForgeInstaller.h"
 #include "installers/LoaderCatalog.h"
 #include "installers/ProfileInstaller.h"
 #include "installers/VanillaInstallValidator.h"
@@ -46,7 +47,8 @@ void InstallController::start(const InstallRequest& request)
 
     if (request.loader != LoaderKind::Vanilla &&
         request.loader != LoaderKind::Fabric &&
-        request.loader != LoaderKind::Quilt)
+        request.loader != LoaderKind::Quilt &&
+        request.loader != LoaderKind::Forge)
     {
         emit failed(QStringLiteral("该加载器尚未实现：%1").arg(loaderKindName(request.loader)));
         return;
@@ -97,6 +99,8 @@ void InstallController::cancel()
         m_downloadService->cancel();
         return;
     }
+    if (m_stage == Stage::ForgeInstalling)
+        return;
 
     m_jsonFetcher->cancel();
     m_stage = Stage::Idle;
@@ -198,6 +202,12 @@ void InstallController::handleJsonFinished(const QByteArray& body)
         }
 
         m_request.loaderVersion = versions.first().version;
+        if (m_request.loader == LoaderKind::Forge)
+        {
+            startForgeInstall();
+            return;
+        }
+
         const QList<QUrl> urls = LoaderCatalog::profileUrls(m_request.loader,
                                                             m_versionId,
                                                             m_request.loaderVersion);
@@ -359,6 +369,12 @@ void InstallController::startLoaderPhase()
         return;
     }
 
+    if (m_request.loader == LoaderKind::Forge)
+    {
+        startForgeInstall();
+        return;
+    }
+
     const QList<QUrl> urls = LoaderCatalog::profileUrls(m_request.loader,
                                                         m_versionId,
                                                         m_request.loaderVersion);
@@ -370,6 +386,39 @@ void InstallController::startLoaderPhase()
 
     m_stage = Stage::LoaderProfile;
     m_jsonFetcher->fetch(urls, 20000);
+}
+
+void InstallController::startForgeInstall()
+{
+    if (ForgeInstaller::isLegacy(m_versionId))
+    {
+        fail(QStringLiteral("Forge 1.13 以下版本将在后续任务实现"));
+        return;
+    }
+
+    m_stage = Stage::ForgeInstalling;
+    emit progress(0, 0, QStringLiteral("正在运行 Forge 安装器..."));
+
+    const ForgeInstallResult result = ForgeInstaller::installModern(m_minecraftDir,
+                                                                    m_versionId,
+                                                                    m_request.loaderVersion,
+                                                                    m_request.javaPath,
+                                                                    m_versionJson);
+    if (m_canceled)
+    {
+        m_stage = Stage::Idle;
+        emit canceled();
+        return;
+    }
+
+    if (!result.ok)
+    {
+        fail(result.error);
+        return;
+    }
+
+    m_loaderId = result.versionId;
+    finishInstall();
 }
 
 bool InstallController::writeVersionJson(QString* error)

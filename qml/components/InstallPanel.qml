@@ -30,9 +30,9 @@ Rectangle {
 
         FlatComboBox {
             Layout.fillWidth: true
-            model: ["原版", "Fabric", "Quilt"]
-            currentIndex: app.loaderKind === "fabric" ? 1 : (app.loaderKind === "quilt" ? 2 : 0)
-            onActivated: app.loaderKind = index === 1 ? "fabric" : (index === 2 ? "quilt" : "vanilla")
+            model: ["原版", "Fabric", "Quilt", "Forge"]
+            currentIndex: app.loaderKind === "fabric" ? 1 : (app.loaderKind === "quilt" ? 2 : (app.loaderKind === "forge" ? 3 : 0))
+            onActivated: app.loaderKind = index === 1 ? "fabric" : (index === 2 ? "quilt" : (index === 3 ? "forge" : "vanilla"))
         }
 
         Text {
