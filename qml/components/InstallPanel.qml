@@ -64,6 +64,18 @@ Rectangle {
         }
 
         Text {
+            text: "Java（可选，留空自动检测）"
+            font.pixelSize: 11
+            color: "#6B7280"
+        }
+
+        FolderField {
+            Layout.fillWidth: true
+            text: app.javaPath
+            onBrowseClicked: app.chooseJavaPath()
+        }
+
+        Text {
             Layout.fillWidth: true
             text: app.instanceId() !== "" ? "实例：" + app.instanceId() : ""
             font.pixelSize: 11

@@ -34,6 +34,7 @@ AppController::AppController(QObject* parent)
     if (m_minecraftDir.isEmpty())
         m_minecraftDir = QDir::homePath() + QStringLiteral("/.minecraft");
     QDir().mkpath(m_minecraftDir);
+    m_javaPath = m_settings->javaPath();
 
     m_installThread = new QThread(this);
     m_installController = new InstallController();
@@ -75,10 +76,17 @@ AppController::AppController(QObject* parent)
 
 AppController::~AppController()
 {
+    if (m_installController != nullptr)
+        m_installController->requestCancel();
+
     if (m_installThread != nullptr)
     {
         m_installThread->quit();
-        m_installThread->wait(3000);
+        if (!m_installThread->wait(30000))
+        {
+            // 避免析构仍在运行的 QThread 触发 qFatal；进程退出时由系统回收。
+            m_installThread->setParent(nullptr);
+        }
     }
 }
 
@@ -104,7 +112,13 @@ QVariantMap AppController::latestRelease() const
 
 QVariantMap AppController::latestSnapshot() const
 {
-    return versionToMap(latestOfGroup(VersionGroup::Snapshot));
+    const VersionInfo release = latestOfGroup(VersionGroup::Release);
+    const VersionInfo snapshot = latestOfGroup(VersionGroup::Snapshot);
+    if (snapshot.id.isEmpty())
+        return {};
+    if (!release.id.isEmpty() && snapshot.releaseTime <= release.releaseTime)
+        return {};
+    return versionToMap(snapshot);
 }
 
 QString AppController::selectedVersion() const
@@ -151,6 +165,20 @@ void AppController::setMinecraftDir(const QString& path)
     m_minecraftDir = absolute;
     m_settings->setMinecraftDir(absolute);
     emit minecraftDirChanged();
+}
+
+QString AppController::javaPath() const
+{
+    return m_javaPath;
+}
+
+void AppController::setJavaPath(const QString& path)
+{
+    if (m_javaPath == path)
+        return;
+    m_javaPath = path;
+    m_settings->setJavaPath(path);
+    emit javaPathChanged();
 }
 
 QString AppController::loaderKind() const
@@ -256,6 +284,16 @@ void AppController::chooseMinecraftDir()
         setMinecraftDir(dir);
 }
 
+void AppController::chooseJavaPath()
+{
+    const QString path = QFileDialog::getOpenFileName(nullptr,
+                                                       QStringLiteral("选择 java.exe"),
+                                                       m_javaPath,
+                                                       QStringLiteral("Java (java.exe);;所有文件 (*)"));
+    if (!path.isEmpty())
+        setJavaPath(path);
+}
+
 void AppController::startInstall()
 {
     if (m_installing)
@@ -280,7 +318,7 @@ void AppController::startInstall()
     request.mcVersion = m_selectedVersion;
     request.loader = loaderKindFromName(m_loaderKind);
     request.loaderVersion = m_loaderVersion;
-    request.javaPath = m_settings->javaPath();
+    request.javaPath = m_javaPath;
 
     m_installing = true;
     m_progress = 0;
@@ -288,8 +326,15 @@ void AppController::startInstall()
     emit progressChanged();
     setStatus(QStringLiteral("准备安装 %1...").arg(m_selectedVersion));
 
-    QMetaObject::invokeMethod(m_installController, "start", Qt::QueuedConnection,
-                              Q_ARG(InstallRequest, request));
+    const bool invoked = QMetaObject::invokeMethod(m_installController, "start", Qt::QueuedConnection,
+                                                   Q_ARG(InstallRequest, request));
+    if (!invoked)
+    {
+        m_installing = false;
+        emit installingChanged();
+        setStatus(QStringLiteral("无法启动安装线程"));
+        emit error(QStringLiteral("无法启动安装线程"));
+    }
 }
 
 void AppController::cancelInstall()
@@ -297,6 +342,8 @@ void AppController::cancelInstall()
     if (!m_installing)
         return;
     setStatus(QStringLiteral("正在取消..."));
+    // 工作线程可能阻塞在安装器进程里，先直接置取消标志。
+    m_installController->requestCancel();
     QMetaObject::invokeMethod(m_installController, "cancel", Qt::QueuedConnection);
 }
 

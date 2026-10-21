@@ -1,4 +1,5 @@
 #include <QCoreApplication>
+#include <QDir>
 #include <QtTest>
 
 #include "tst_appcontroller.h"
@@ -29,7 +30,8 @@ int runSuite(QObject* suite, const QString& name, int argc, char *argv[])
     for (int i = 0; i < argc; ++i)
         args.append(QByteArray(argv[i]));
 
-    const QByteArray outputFile = (name + QStringLiteral(".txt")).toUtf8();
+    const QString outputDir = QDir(QCoreApplication::applicationDirPath()).filePath(QStringLiteral(".."));
+    const QByteArray outputFile = QDir(outputDir).filePath(name + QStringLiteral(".txt")).toUtf8();
     args.append(QByteArrayLiteral("-o"));
     args.append(outputFile + QByteArrayLiteral(",txt"));
 

@@ -5,6 +5,7 @@
 #include <QDirIterator>
 #include <QFile>
 #include <QFileInfo>
+#include <QVector>
 #include <QUuid>
 
 namespace
@@ -85,6 +86,25 @@ bool StagingArea::mergeInto(QString* error)
         return false;
     }
 
+    struct VersionBackup
+    {
+        QString target;
+        QString backup;
+    };
+    QVector<VersionBackup> backups;
+
+    auto rollback = [&backups]() {
+        for (int i = backups.size() - 1; i >= 0; --i)
+        {
+            const VersionBackup& item = backups.at(i);
+            if (!QFileInfo::exists(item.backup))
+                continue;
+            QDir(item.target).removeRecursively();
+            QDir().rename(item.backup, item.target);
+        }
+        backups.clear();
+    };
+
     const QString versionsSource = QDir(m_minecraftPath).filePath(QStringLiteral("versions"));
     QDir versionsDir(versionsSource);
     if (versionsDir.exists())
@@ -100,6 +120,7 @@ bool StagingArea::mergeInto(QString* error)
                 const QString backupRoot = target.filePath(QStringLiteral(".pcl2downloader-backup"));
                 if (!QDir().mkpath(backupRoot))
                 {
+                    rollback();
                     *error = QStringLiteral("无法创建备份目录：%1").arg(backupRoot);
                     return false;
                 }
@@ -109,13 +130,18 @@ bool StagingArea::mergeInto(QString* error)
                                                 QDateTime::currentDateTime().toString(QStringLiteral("yyyyMMdd-HHmmss-zzz"))));
                 if (!QDir().rename(targetVersion, backup))
                 {
+                    rollback();
                     *error = QStringLiteral("无法备份已有版本：%1").arg(targetVersion);
                     return false;
                 }
+                backups.append({targetVersion, backup});
             }
 
             if (!copyDirectory(source, targetVersion, error))
+            {
+                rollback();
                 return false;
+            }
         }
     }
 
@@ -123,7 +149,10 @@ bool StagingArea::mergeInto(QString* error)
     if (QDir(librariesSource).exists())
     {
         if (!copyDirectory(librariesSource, target.filePath(QStringLiteral("libraries")), error))
+        {
+            rollback();
             return false;
+        }
     }
 
     return true;

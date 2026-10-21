@@ -105,3 +105,21 @@ void TstInstallController::rejectsUnsupportedLoader()
     QCOMPARE(failed.count(), 1);
     QVERIFY(!controller.isRunning());
 }
+
+void TstInstallController::startAndCancelAreInvokable()
+{
+    InstallController controller;
+    QVERIFY(controller.metaObject()->indexOfMethod("start(InstallRequest)") >= 0);
+    QVERIFY(controller.metaObject()->indexOfMethod("cancel()") >= 0);
+
+    QTemporaryDir dir;
+    QVERIFY(dir.isValid());
+    InstallRequest request;
+    request.minecraftDir = dir.path();
+    request.mcVersion = QString();
+
+    QSignalSpy failed(&controller, &InstallController::failed);
+    QVERIFY(QMetaObject::invokeMethod(&controller, "start", Qt::DirectConnection,
+                                      Q_ARG(InstallRequest, request)));
+    QCOMPARE(failed.count(), 1);
+}

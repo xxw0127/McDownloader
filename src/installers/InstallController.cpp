@@ -1,5 +1,6 @@
 #include "installers/InstallController.h"
 
+#include <QDateTime>
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
@@ -20,6 +21,7 @@
 #include "installers/JavaRequirement.h"
 #include "installers/LoaderCatalog.h"
 #include "installers/NeoForgeInstaller.h"
+#include "installers/ProcessRunner.h"
 #include "installers/ProfileInstaller.h"
 #include "installers/VanillaInstallValidator.h"
 #include "installers/VanillaPlanBuilder.h"
@@ -86,16 +88,28 @@ void InstallController::start(const InstallRequest& request)
     m_assetIndex = QJsonObject();
     m_loaderProfile = QJsonObject();
     m_loaderId.clear();
+    m_protectedVersionId.clear();
+    m_backupPath.clear();
+    m_createdVersionId.clear();
     m_plan = InstallPlan();
     m_canceled = false;
+    m_manifestRetry = false;
+    m_cancelRequested.store(false);
     m_downloadPhase = DownloadPhase::Vanilla;
     m_stage = Stage::Manifest;
 
     m_jsonFetcher->fetch(MirrorResolver::manifestUrls(), 20000);
 }
 
+void InstallController::requestCancel()
+{
+    // 可从 UI 线程直接调用；只写原子标志，不触碰工作线程对象。
+    m_cancelRequested.store(true);
+}
+
 void InstallController::cancel()
 {
+    requestCancel();
     if (m_stage == Stage::Idle)
         return;
 
@@ -109,6 +123,7 @@ void InstallController::cancel()
         return;
 
     m_jsonFetcher->cancel();
+    restoreProtectedVersion();
     m_stage = Stage::Idle;
     emit canceled();
 }
@@ -142,6 +157,17 @@ void InstallController::handleJsonFinished(const QByteArray& body)
 
         if (!found)
         {
+            if (!m_manifestRetry)
+            {
+                m_manifestRetry = true;
+                const QList<QUrl> urls = MirrorResolver::manifestUrls();
+                if (urls.size() >= 2)
+                {
+                    m_stage = Stage::Manifest;
+                    m_jsonFetcher->fetch({urls.at(1)}, 20000);
+                    return;
+                }
+            }
             fail(QStringLiteral("版本清单中找不到 %1").arg(m_request.mcVersion));
             return;
         }
@@ -252,6 +278,12 @@ void InstallController::handleJsonFinished(const QByteArray& body)
             return;
         }
 
+        if (!protectVersion(m_loaderId, &error))
+        {
+            fail(error);
+            return;
+        }
+
         if (!writeJsonObject(m_loaderId, profile, &error))
         {
             fail(error);
@@ -344,6 +376,7 @@ void InstallController::handleDownloadFailed(const QString& error)
 
 void InstallController::handleDownloadCanceled()
 {
+    restoreProtectedVersion();
     m_stage = Stage::Idle;
     emit canceled();
 }
@@ -353,6 +386,12 @@ void InstallController::startDownload()
     m_plan = VanillaPlanBuilder::build(m_versionJson, m_minecraftDir, m_versionId, m_assetIndex);
 
     QString error;
+    if (m_request.loader == LoaderKind::Vanilla && !protectVersion(m_versionId, &error))
+    {
+        fail(error);
+        return;
+    }
+
     if (!writeVersionJson(&error))
     {
         fail(error);
@@ -417,8 +456,9 @@ void InstallController::startForgeInstall()
                                                                           m_versionId,
                                                                           m_request.loaderVersion,
                                                                           m_request.javaPath,
-                                                                          m_versionJson);
-    if (m_canceled)
+                                                                          m_versionJson,
+                                                                          &m_cancelRequested);
+    if (m_canceled || m_cancelRequested.load())
     {
         m_stage = Stage::Idle;
         emit canceled();
@@ -450,8 +490,9 @@ void InstallController::startNeoForgeInstall()
                                                                     m_versionId,
                                                                     m_request.loaderVersion,
                                                                     m_request.javaPath,
-                                                                    m_versionJson);
-    if (m_canceled)
+                                                                    m_versionJson,
+                                                                    &m_cancelRequested);
+    if (m_canceled || m_cancelRequested.load())
     {
         m_stage = Stage::Idle;
         emit canceled();
@@ -507,6 +548,90 @@ bool InstallController::writeJsonObject(const QString& versionId, const QJsonObj
     return true;
 }
 
+bool InstallController::protectVersion(const QString& versionId, QString* error)
+{
+    bool ok = false;
+    const QString target = Paths::joinWithin(m_minecraftDir,
+                                             QStringLiteral("versions/%1").arg(versionId),
+                                             &ok);
+    if (!ok)
+    {
+        *error = QStringLiteral("版本路径不安全：%1").arg(versionId);
+        return false;
+    }
+
+    if (!QFileInfo::exists(target))
+    {
+        m_createdVersionId = versionId;
+        return true;
+    }
+
+    const QString backupRoot = Paths::joinWithin(m_minecraftDir,
+                                                 QStringLiteral(".pcl2downloader-backup"),
+                                                 &ok);
+    if (!ok || !QDir().mkpath(backupRoot))
+    {
+        *error = QStringLiteral("无法创建版本备份目录");
+        return false;
+    }
+
+    const QString backup = QDir(backupRoot).filePath(
+        QStringLiteral("%1-%2").arg(versionId,
+                                    QDateTime::currentDateTime().toString(QStringLiteral("yyyyMMdd-HHmmss-zzz"))));
+    if (!QDir().rename(target, backup))
+    {
+        *error = QStringLiteral("无法备份已有版本：%1").arg(versionId);
+        return false;
+    }
+
+    m_protectedVersionId = versionId;
+    m_backupPath = backup;
+    Logger::info(QStringLiteral("install"),
+                 QStringLiteral("已备份已有版本 %1 到 %2").arg(versionId, backup));
+    return true;
+}
+
+void InstallController::restoreProtectedVersion()
+{
+    if (!m_backupPath.isEmpty())
+    {
+        bool ok = false;
+        const QString target = Paths::joinWithin(m_minecraftDir,
+                                                 QStringLiteral("versions/%1").arg(m_protectedVersionId),
+                                                 &ok);
+        if (ok && !m_protectedVersionId.isEmpty())
+        {
+            QDir(target).removeRecursively();
+            if (QDir().rename(m_backupPath, target))
+                Logger::info(QStringLiteral("install"),
+                             QStringLiteral("安装失败，已恢复旧版本 %1").arg(m_protectedVersionId));
+        }
+    }
+    else if (!m_createdVersionId.isEmpty())
+    {
+        bool ok = false;
+        const QString target = Paths::joinWithin(m_minecraftDir,
+                                                 QStringLiteral("versions/%1").arg(m_createdVersionId),
+                                                 &ok);
+        if (ok)
+            QDir(target).removeRecursively();
+    }
+
+    m_protectedVersionId.clear();
+    m_backupPath.clear();
+    m_createdVersionId.clear();
+}
+
+void InstallController::releaseProtectedVersion()
+{
+    if (!m_backupPath.isEmpty())
+        Logger::info(QStringLiteral("install"),
+                     QStringLiteral("旧版本备份保留在 %1").arg(m_backupPath));
+    m_protectedVersionId.clear();
+    m_backupPath.clear();
+    m_createdVersionId.clear();
+}
+
 void InstallController::configureJava(const QString& versionId)
 {
     const int requiredMajor = JavaRequirement::majorForVersion(m_versionJson, m_versionId);
@@ -515,14 +640,20 @@ void InstallController::configureJava(const QString& versionId)
     const QFileInfo requestedJava(m_request.javaPath);
     if (!m_request.javaPath.isEmpty() && requestedJava.exists() && requestedJava.isFile())
     {
-        selected.path = requestedJava.absoluteFilePath();
-        selected.major = requiredMajor;
-        selected.is64Bit = true;
+        const ProcessResult version = ProcessRunner::run(requestedJava.absoluteFilePath(),
+                                                         {QStringLiteral("-version")},
+                                                         QProcessEnvironment(),
+                                                         5000);
+        JavaInfo requested = JavaLocator::parseVersionOutput(version.stdOut + version.stdErr);
+        if (requested.major == requiredMajor && requested.is64Bit)
+        {
+            requested.path = requestedJava.absoluteFilePath();
+            selected = requested;
+        }
     }
-    else
-    {
+
+    if (selected.path.isEmpty())
         selected = JavaLocator::selectForInstaller(JavaLocator::scan(m_minecraftDir), requiredMajor);
-    }
 
     if (selected.path.isEmpty())
     {
@@ -664,6 +795,7 @@ void InstallController::finishInstall()
 {
     const QString finalId = m_loaderId.isEmpty() ? m_versionId : m_loaderId;
     configureJava(finalId);
+    releaseProtectedVersion();
     m_stage = Stage::Idle;
     emit finished(finalId);
 }
@@ -744,6 +876,7 @@ bool InstallController::applyCopies(QString* error)
 
 void InstallController::fail(const QString& error)
 {
+    restoreProtectedVersion();
     m_stage = Stage::Idle;
     emit failed(error);
 }

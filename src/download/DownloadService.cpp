@@ -7,6 +7,7 @@
 #include <QNetworkReply>
 #include <QNetworkRequest>
 #include <QThread>
+#include <QTimer>
 
 #include "core/Checksum.h"
 #include "core/Logger.h"
@@ -180,6 +181,13 @@ void DownloadService::startUrl(Task* task)
     request.setHeader(QNetworkRequest::UserAgentHeader, QStringLiteral("PCL2Downloader/0.1"));
 
     task->reply = m_nam->get(request);
+
+    // 镜像可能接受连接后一直不响应；60 秒无完成则中止并走下一个 URL。
+    QNetworkReply* reply = task->reply;
+    QTimer::singleShot(60000, reply, [reply]() {
+        if (reply != nullptr && reply->isRunning())
+            reply->abort();
+    });
 
     connect(task->reply, &QNetworkReply::readyRead, this, [this, task]() {
         if (task->reply == nullptr || task->file == nullptr)

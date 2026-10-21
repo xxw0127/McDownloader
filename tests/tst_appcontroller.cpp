@@ -58,6 +58,21 @@ void TstAppController::loaderKindChangeClearsVersion()
     QVERIFY(controller.loaderVersion().isEmpty());
 }
 
+void TstAppController::startValidRequestStartsWorker()
+{
+    QTemporaryDir dir;
+    QVERIFY(dir.isValid());
+
+    AppController controller;
+    controller.setMinecraftDir(dir.path());
+    controller.setSelectedVersion(QStringLiteral("1.20.1"));
+
+    controller.startInstall();
+    QVERIFY(controller.isInstalling());
+
+    controller.cancelInstall();
+}
+
 void TstAppController::settingsRoundTrip()
 {
     QTemporaryDir dir;

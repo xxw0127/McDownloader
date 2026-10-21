@@ -216,6 +216,13 @@ bool prepareInstallerLibraries(const QString& installerPath,
 
         if (!downloadFile(file.urls, target, error))
             return false;
+
+        if (!Checksum::verifyFile(target, file.size, file.sha1, &verifyError))
+        {
+            QFile::remove(target);
+            *error = verifyError;
+            return false;
+        }
     }
     return true;
 }
@@ -395,7 +402,8 @@ NeoForgeInstallResult NeoForgeInstaller::install(const QString& minecraftDir,
                                                   const QString& mcVersion,
                                                   const QString& loaderVersion,
                                                   const QString& javaPath,
-                                                  const QJsonObject& versionJson)
+                                                  const QJsonObject& versionJson,
+                                                  const std::atomic_bool* cancelFlag)
 {
     NeoForgeInstallResult result;
     QString error;
@@ -471,18 +479,22 @@ NeoForgeInstallResult NeoForgeInstaller::install(const QString& minecraftDir,
         QStringLiteral("https://bmclapi2.bangbang93.com/maven")
     };
 
-    ProcessResult process = ProcessRunner::run(java, args, QProcessEnvironment(), 15 * 60 * 1000);
+    ProcessResult process = ProcessRunner::run(java, args, QProcessEnvironment(), 15 * 60 * 1000, cancelFlag);
+    if (process.canceled)
+        return fail(QStringLiteral("canceled"));
     if (process.timedOut)
         return fail(QStringLiteral("NeoForge 安装器超时"));
 
     QString generated = findGeneratedVersion(staging.minecraftPath(), mcVersion, &error);
-    if (generated.isEmpty())
+    if (process.exitCode != 0 || generated.isEmpty())
     {
         args = args.mid(0, args.size() - 2);
-        process = ProcessRunner::run(java, args, QProcessEnvironment(), 15 * 60 * 1000);
+        process = ProcessRunner::run(java, args, QProcessEnvironment(), 15 * 60 * 1000, cancelFlag);
         generated = findGeneratedVersion(staging.minecraftPath(), mcVersion, &error);
     }
 
+    if (process.canceled)
+        return fail(QStringLiteral("canceled"));
     if (generated.isEmpty() || process.exitCode != 0)
     {
         Logger::error(QStringLiteral("neoforge"),
@@ -494,7 +506,11 @@ NeoForgeInstallResult NeoForgeInstaller::install(const QString& minecraftDir,
     if (!patchGeneratedVersion(staging.minecraftPath(), mcVersion, loaderVersion, generated, &error))
         return fail(error);
 
-    QDir(QDir(staging.minecraftPath()).filePath(QStringLiteral("versions/%1").arg(mcVersion))).removeRecursively();
+    if (cancelFlag != nullptr && cancelFlag->load())
+        return fail(QStringLiteral("canceled"));
+
+    if (!QDir(QDir(staging.minecraftPath()).filePath(QStringLiteral("versions/%1").arg(mcVersion))).removeRecursively())
+        return fail(QStringLiteral("无法清理 staging 基底版本"));
     if (!staging.mergeInto(&error))
         return fail(error);
 

@@ -14,6 +14,7 @@ private slots:
     void startWithoutVersionEmitsError();
     void loaderKindChangeClearsVersion();
     void settingsRoundTrip();
+    void startValidRequestStartsWorker();
 };
 
 #endif // TST_APPCONTROLLER_H

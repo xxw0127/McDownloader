@@ -7,6 +7,8 @@
 #include <QUrl>
 #include <QVector>
 
+#include <atomic>
+
 #include "core/LoaderKind.h"
 
 struct NeoForgeInstallResult
@@ -30,7 +32,8 @@ public:
                                          const QString& mcVersion,
                                          const QString& loaderVersion,
                                          const QString& javaPath,
-                                         const QJsonObject& versionJson);
+                                         const QJsonObject& versionJson,
+                                         const std::atomic_bool* cancelFlag = nullptr);
 };
 
 #endif // NEOFORGEINSTALLER_H

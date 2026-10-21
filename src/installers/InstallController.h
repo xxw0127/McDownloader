@@ -6,6 +6,8 @@
 #include <QString>
 #include <QUrl>
 
+#include <atomic>
+
 #include "core/LoaderKind.h"
 #include "installers/InstallPlan.h"
 
@@ -21,6 +23,8 @@ struct InstallRequest
     QString javaPath;
 };
 
+Q_DECLARE_METATYPE(InstallRequest)
+
 class InstallController : public QObject
 {
     Q_OBJECT
@@ -28,8 +32,9 @@ class InstallController : public QObject
 public:
     explicit InstallController(QObject* parent = nullptr);
 
-    void start(const InstallRequest& request);
-    void cancel();
+    Q_INVOKABLE void start(const InstallRequest& request);
+    Q_INVOKABLE void cancel();
+    void requestCancel();
     bool isRunning() const;
 
 signals:
@@ -72,6 +77,9 @@ private:
     bool writeJsonObject(const QString& versionId, const QJsonObject& object, QString* error);
     bool writeLauncherProfiles(QString* error);
     bool applyCopies(QString* error);
+    bool protectVersion(const QString& versionId, QString* error);
+    void restoreProtectedVersion();
+    void releaseProtectedVersion();
     void configureJava(const QString& versionId);
     bool createJavaLink(const QString& versionDir, const QString& javaPath, QString* error);
     bool writePclJavaConfig(const QString& versionDir, const QString& javaPath, QString* error);
@@ -92,6 +100,11 @@ private:
     Stage m_stage = Stage::Idle;
     DownloadPhase m_downloadPhase = DownloadPhase::Vanilla;
     bool m_canceled = false;
+    bool m_manifestRetry = false;
+    std::atomic_bool m_cancelRequested{false};
+    QString m_protectedVersionId;
+    QString m_backupPath;
+    QString m_createdVersionId;
 };
 
 #endif // INSTALLCONTROLLER_H

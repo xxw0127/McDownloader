@@ -31,6 +31,8 @@ powershell -ExecutionPolicy Bypass -File scripts\run-tests.ps1 -Network
 - 程序：`build\release\PCL2Downloader.exe`
 - 分发包：`dist\PCL2Downloader-win64.zip`
 
+本机 Qt 的插件元数据会被 windeployqt 误判为 debug；构建脚本保留 windeployqt 尝试，并自动手工部署 release DLL、QML 和平台插件。
+
 ## 命令行安装（验收用）
 
 ```powershell
@@ -60,7 +62,9 @@ mingw32-make -j4
 - `versions\<实例>\java`：指向 Java 根目录的目录链接；
 - `versions\<实例>\PCL\Setup.ini`：`VersionArgumentJavaV2:2` + `VersionArgumentJavaSelect`。
 
-这样 PCL2 会给 1.21.1 使用 Java 21，而不是全局默认的 Java 25。
+这样 PCL2 会给 1.21.1 使用 Java 21，而不是全局默认的 Java 25。安装面板也提供可选的 `java.exe` 路径；留空时自动扫描。
+
+重新安装已有版本时，旧版本会先移动到 `.pcl2downloader-backup`，安装失败会尝试恢复。
 
 准备 Java：
 

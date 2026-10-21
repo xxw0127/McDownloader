@@ -211,7 +211,8 @@ ForgeInstallResult ForgeInstaller::installModern(const QString& minecraftDir,
                                                   const QString& mcVersion,
                                                   const QString& forgeVersion,
                                                   const QString& javaPath,
-                                                  const QJsonObject& versionJson)
+                                                  const QJsonObject& versionJson,
+                                                  const std::atomic_bool* cancelFlag)
 {
     ForgeInstallResult result;
 
@@ -275,28 +276,37 @@ ForgeInstallResult ForgeInstaller::installModern(const QString& minecraftDir,
         QStringLiteral("https://bmclapi2.bangbang93.com/maven")
     };
 
-    ProcessResult process = ProcessRunner::run(java, args, QProcessEnvironment(), 15 * 60 * 1000);
+    ProcessResult process = ProcessRunner::run(java, args, QProcessEnvironment(), 15 * 60 * 1000, cancelFlag);
+    if (process.canceled)
+        return fail(QStringLiteral("canceled"));
     if (process.timedOut)
         return fail(QStringLiteral("Forge 安装器超时"));
 
     QString generated = findGeneratedVersion(staging.minecraftPath(), mcVersion, &error);
-    if (generated.isEmpty())
+    if (process.exitCode != 0 || generated.isEmpty())
     {
-        // 镜像失败时按设计回退官方源再试一次。
+        // 镜像或首次运行失败时按设计回退官方源再试一次。
         args = args.mid(0, args.size() - 2);
-        process = ProcessRunner::run(java, args, QProcessEnvironment(), 15 * 60 * 1000);
+        process = ProcessRunner::run(java, args, QProcessEnvironment(), 15 * 60 * 1000, cancelFlag);
         generated = findGeneratedVersion(staging.minecraftPath(), mcVersion, &error);
     }
 
-    if (generated.isEmpty())
+    if (process.canceled)
+        return fail(QStringLiteral("canceled"));
+    if (process.exitCode != 0 || generated.isEmpty())
     {
         Logger::error(QStringLiteral("forge"),
                       QStringLiteral("安装器退出码 %1\n%2").arg(process.exitCode).arg(process.stdErr.right(4000)));
-        return fail(error);
+        return fail(generated.isEmpty() ? error
+                                        : QStringLiteral("Forge 安装器退出码 %1").arg(process.exitCode));
     }
 
     // 不让 staging 里的基底版本覆盖真实基底版本。
-    QDir(QDir(staging.minecraftPath()).filePath(QStringLiteral("versions/%1").arg(mcVersion))).removeRecursively();
+    if (!QDir(QDir(staging.minecraftPath()).filePath(QStringLiteral("versions/%1").arg(mcVersion))).removeRecursively())
+        return fail(QStringLiteral("无法清理 staging 基底版本"));
+
+    if (cancelFlag != nullptr && cancelFlag->load())
+        return fail(QStringLiteral("canceled"));
 
     if (!staging.mergeInto(&error))
         return fail(error);
@@ -379,6 +389,12 @@ ForgeInstallResult ForgeInstaller::installLegacy(const QString& minecraftDir,
 
         if (!downloadFile(file.urls, target, &error))
             return fail(error);
+
+        if (!Checksum::verifyFile(target, file.size, file.sha1, &verifyError))
+        {
+            QFile::remove(target);
+            return fail(verifyError);
+        }
     }
 
     if (!staging.mergeInto(&error))

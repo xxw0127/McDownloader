@@ -12,6 +12,9 @@ void TstPaths::safeRelativePaths()
     QVERIFY(!Paths::isSafeRelativePath(QStringLiteral("/root/x")));
     QVERIFY(!Paths::isSafeRelativePath(QStringLiteral("\\root\\x")));
     QVERIFY(!Paths::isSafeRelativePath(QString()));
+    QVERIFY(!Paths::isSafeRelativePath(QStringLiteral("CON/x")));
+    QVERIFY(!Paths::isSafeRelativePath(QStringLiteral("versions/bad?.json")));
+    QVERIFY(!Paths::isSafeRelativePath(QStringLiteral("versions/trailing./x")));
 }
 
 void TstPaths::sanitizeInstanceNames()

@@ -27,27 +27,22 @@ finally {
     Pop-Location
 }
 
-if ($Network) {
-    $env:PCL2_RUN_NETWORK_TESTS = '1'
-}
-else {
-    Remove-Item Env:\PCL2_RUN_NETWORK_TESTS -ErrorAction SilentlyContinue
-}
-
 $testExe = Join-Path $testsBuild 'release\tst_main.exe'
 if (-not (Test-Path $testExe)) {
     throw "未生成测试程序：$testExe"
 }
 
+$marker = Join-Path $testsBuild 'network.enabled'
 if ($Network) {
-    # PowerShell 5.1 的 & 调用在本环境下没有把新环境变量传给子进程，用 cmd 启动。
-    cmd /c "`"$testExe`""
-    $exitCode = $LASTEXITCODE
+    '1' | Set-Content $marker -Encoding ASCII
 }
 else {
-    & $testExe
-    $exitCode = $LASTEXITCODE
+    Remove-Item $marker -Force -ErrorAction SilentlyContinue
 }
+
+& $testExe
+$exitCode = $LASTEXITCODE
+Remove-Item $marker -Force -ErrorAction SilentlyContinue
 
 foreach ($suite in @('paths', 'checksum', 'logger', 'version', 'versionlistmodel', 'download', 'jsonfetcher', 'mirror', 'vanilla', 'installcontroller', 'appcontroller', 'loader', 'java', 'process', 'staging', 'forge', 'legacyforge', 'neoforge')) {
     $file = Join-Path $testsBuild "$suite.txt"

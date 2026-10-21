@@ -36,10 +36,19 @@ int main(int argc, char* argv[])
         return 2;
     }
 
+    const QString loaderName = parser.value(loaderOption).toLower();
+    if (!QStringList({QStringLiteral("vanilla"), QStringLiteral("fabric"), QStringLiteral("quilt"),
+                      QStringLiteral("forge"), QStringLiteral("neoforge")})
+             .contains(loaderName))
+    {
+        QTextStream(stderr) << "error: unknown loader: " << loaderName << Qt::endl;
+        return 2;
+    }
+
     InstallRequest request;
     request.mcVersion = parser.value(mcOption);
     request.minecraftDir = parser.value(dirOption);
-    request.loader = loaderKindFromName(parser.value(loaderOption));
+    request.loader = loaderKindFromName(loaderName);
     request.loaderVersion = parser.value(loaderVersionOption);
     request.javaPath = parser.value(javaOption);
 
@@ -71,22 +80,28 @@ int main(int argc, char* argv[])
         }
     });
 
+    int exitCode = -1;
     QObject::connect(&controller, &InstallController::finished, [&](const QString& versionId) {
         out << "installed " << versionId << Qt::endl;
+        exitCode = 0;
         app.exit(0);
     });
 
     QObject::connect(&controller, &InstallController::failed, [&](const QString& error) {
         err << "error: " << error << Qt::endl;
         Logger::error(QStringLiteral("cli"), error);
+        exitCode = 1;
         app.exit(1);
     });
 
     QObject::connect(&controller, &InstallController::canceled, [&]() {
         out << "canceled" << Qt::endl;
+        exitCode = 2;
         app.exit(2);
     });
 
     controller.start(request);
+    if (exitCode >= 0)
+        return exitCode;
     return app.exec();
 }

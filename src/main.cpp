@@ -1,4 +1,4 @@
-#include <QGuiApplication>
+#include <QApplication>
 #include <QMessageLogContext>
 #include <QMetaObject>
 #include <QQmlApplicationEngine>
@@ -36,7 +36,7 @@ void logQtMessage(QtMsgType type, const QMessageLogContext&, const QString& mess
 
 int main(int argc, char *argv[])
 {
-    QGuiApplication app(argc, argv);
+    QApplication app(argc, argv);
     QCoreApplication::setOrganizationName(QStringLiteral("PCL2Downloader"));
     QCoreApplication::setApplicationName(QStringLiteral("PCL2 Downloader"));
     QCoreApplication::setApplicationVersion(QStringLiteral("0.1.0"));

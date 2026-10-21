@@ -6,6 +6,8 @@
 #include <QString>
 #include <QUrl>
 
+#include <atomic>
+
 struct ForgeInstallResult
 {
     bool ok = false;
@@ -22,7 +24,8 @@ public:
                                             const QString& mcVersion,
                                             const QString& forgeVersion,
                                             const QString& javaPath,
-                                            const QJsonObject& versionJson);
+                                            const QJsonObject& versionJson,
+                                            const std::atomic_bool* cancelFlag = nullptr);
     static ForgeInstallResult installLegacy(const QString& minecraftDir,
                                             const QString& mcVersion,
                                             const QString& forgeVersion);

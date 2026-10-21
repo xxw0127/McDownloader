@@ -34,7 +34,7 @@ powershell -ExecutionPolicy Bypass -File scripts\run-tests.ps1 -Network
 验收结果：
 
 - QtTest 全部通过（路径、SHA1、日志、版本分组、下载、镜像、JSON、原版计划、安装校验、AppController、Fabric/Quilt、Java、进程、Staging、Forge、Legacy Forge、NeoForge）。
-- 网络测试覆盖 BMCLAPI → Mojang 回退、302 重定向、超时和镜像失败回退。
+- 网络测试覆盖 BMCLAPI → Mojang 回退、请求超时和镜像失败回退；302 重定向未做自动化测试。
 - 构建产物：`build\release\PCL2Downloader.exe`
 - 打包产物：`dist\PCL2Downloader-win64.zip`
 
@@ -55,6 +55,12 @@ powershell -ExecutionPolicy Bypass -File scripts\run-tests.ps1 -Network
 2. 在 `versions\<实例>\PCL\Setup.ini` 写入 `VersionArgumentJavaV2:2` 和 `VersionArgumentJavaSelect`。
 
 因此 PCL2 即使全局 Java 选择指向 Java 25，也会对 1.21.1 使用 Java 21。Java 缺失时安装仍完成，但日志会提示需要手动准备对应 Java；可用 `scripts\prepare-java8.ps1` / `scripts\prepare-java21.ps1` 准备。
+
+## 覆盖与回滚
+
+- 原版、Fabric、Quilt 重新安装时，旧版本目录会先移动到 `.pcl2downloader-backup`；安装失败或取消会尝试恢复旧版本。
+- Forge、NeoForge 使用 staging，合并时先备份旧版本；复制失败会回滚已替换的版本目录。
+- 备份不会自动删除，便于用户回退。
 
 ## 安装命令
 
@@ -100,7 +106,7 @@ powershell -ExecutionPolicy Bypass -File scripts\prepare-pcl2-sandbox.ps1 -Force
 | Forge 14.23.5.2860 / 1.12.2 | 通过（手动解包） | 通过 | PID 24408，日志 16:53:45 |
 | NeoForge 21.1.80 / 1.21.1 | 通过 | 通过（Java 21） | PID 21040，`Minecraft NeoForge* 1.21.1`，日志 17:53:53 |
 
-取消、断网、镜像失败和 SHA1 错误由 QtTest 的本地 HTTP 服务器覆盖；没有依赖外网状态。
+取消、镜像失败、请求超时和 SHA1 错误由 QtTest 的本地 HTTP 服务器覆盖；没有依赖外网状态。
 
 ## PCL2 版本列表
 

@@ -129,7 +129,10 @@ InstallPlan ProfileInstaller::buildPlan(const QJsonObject& profile, const QStrin
             file.targetRelativePath = QStringLiteral("libraries/") + artifactPath;
             file.size = jsonSize(artifact);
             file.sha1 = artifact.value(QStringLiteral("sha1")).toString().toLatin1();
-            const QUrl official(expandPlaceholders(artifact.value(QStringLiteral("url")).toString()));
+            const QString urlText = expandPlaceholders(artifact.value(QStringLiteral("url")).toString());
+            const QUrl official = urlText.isEmpty()
+                                      ? QUrl(QStringLiteral("https://libraries.minecraft.net/") + artifactPath)
+                                      : QUrl(urlText);
             file.urls = MirrorResolver::libraryUrls(artifactPath, official);
         }
         else

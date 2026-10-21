@@ -14,6 +14,13 @@ Window {
     title: app.appName
     color: "#F7F7F8"
 
+    onClosing: {
+        if (app.installing) {
+            close.accepted = false
+            app.cancelInstall()
+        }
+    }
+
     ColumnLayout {
         anchors.fill: parent
         anchors.margins: 20

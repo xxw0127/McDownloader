@@ -1,5 +1,8 @@
 #include "tst_jsonfetcher.h"
 
+#include <QCoreApplication>
+#include <QDir>
+#include <QFile>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QSignalSpy>
@@ -38,8 +41,9 @@ void TstJsonFetcher::timeoutEmitsFailed()
 
 void TstJsonFetcher::fetchesRealManifestWhenEnabled()
 {
-    if (!qEnvironmentVariableIsSet("PCL2_RUN_NETWORK_TESTS"))
-        QSKIP("设置 PCL2_RUN_NETWORK_TESTS=1 才运行网络测试");
+    const QString marker = QDir(QCoreApplication::applicationDirPath()).filePath(QStringLiteral("../network.enabled"));
+    if (!qEnvironmentVariableIsSet("PCL2_RUN_NETWORK_TESTS") && !QFile::exists(marker))
+        QSKIP("设置 PCL2_RUN_NETWORK_TESTS=1 或创建 network.enabled 才运行网络测试");
 
     JsonFetcher fetcher;
     QSignalSpy finished(&fetcher, &JsonFetcher::finished);

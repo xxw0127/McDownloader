@@ -27,6 +27,7 @@ class AppController : public QObject
     Q_PROPERTY(QVariantMap latestSnapshot READ latestSnapshot NOTIFY latestChanged)
     Q_PROPERTY(QString selectedVersion READ selectedVersion WRITE setSelectedVersion NOTIFY selectedVersionChanged)
     Q_PROPERTY(QString minecraftDir READ minecraftDir WRITE setMinecraftDir NOTIFY minecraftDirChanged)
+    Q_PROPERTY(QString javaPath READ javaPath WRITE setJavaPath NOTIFY javaPathChanged)
     Q_PROPERTY(QString loaderKind READ loaderKind WRITE setLoaderKind NOTIFY loaderKindChanged)
     Q_PROPERTY(QString loaderVersion READ loaderVersion WRITE setLoaderVersion NOTIFY loaderVersionChanged)
     Q_PROPERTY(bool installing READ isInstalling NOTIFY installingChanged)
@@ -46,6 +47,8 @@ public:
     void setSelectedVersion(const QString& versionId);
     QString minecraftDir() const;
     void setMinecraftDir(const QString& path);
+    QString javaPath() const;
+    void setJavaPath(const QString& path);
     QString loaderKind() const;
     void setLoaderKind(const QString& kind);
     QString loaderVersion() const;
@@ -57,6 +60,7 @@ public:
     Q_INVOKABLE void loadMockVersions();
     Q_INVOKABLE void refreshVersions();
     Q_INVOKABLE void chooseMinecraftDir();
+    Q_INVOKABLE void chooseJavaPath();
     Q_INVOKABLE void startInstall();
     Q_INVOKABLE void cancelInstall();
     Q_INVOKABLE void openMinecraftDir();
@@ -66,6 +70,7 @@ signals:
     void latestChanged();
     void selectedVersionChanged();
     void minecraftDirChanged();
+    void javaPathChanged();
     void loaderKindChanged();
     void loaderVersionChanged();
     void installingChanged();
@@ -93,6 +98,7 @@ private:
     QVector<VersionInfo> m_versions;
     QString m_selectedVersion;
     QString m_minecraftDir;
+    QString m_javaPath;
     QString m_loaderKind;
     QString m_loaderVersion;
     bool m_installing = false;
@@ -110,7 +116,5 @@ private:
     bool m_bmclapiDone = false;
     bool m_mojangDone = false;
 };
-
-Q_DECLARE_METATYPE(InstallRequest)
 
 #endif // APPCONTROLLER_H

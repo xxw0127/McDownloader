@@ -14,6 +14,7 @@ private slots:
     void missingAssetIndexFails();
     void completeInstallPasses();
     void rejectsUnsupportedLoader();
+    void startAndCancelAreInvokable();
 };
 
 #endif // TST_INSTALLCONTROLLER_H
