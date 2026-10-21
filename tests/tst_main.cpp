@@ -2,7 +2,10 @@
 #include <QtTest>
 
 #include "tst_checksum.h"
+#include "tst_download.h"
+#include "tst_jsonfetcher.h"
 #include "tst_logger.h"
+#include "tst_mirror.h"
 #include "tst_paths.h"
 #include "tst_version.h"
 #include "tst_versionlistmodel.h"
@@ -53,6 +56,18 @@ int main(int argc, char *argv[])
     {
         TstVersionListModel test;
         status |= runSuite(&test, QStringLiteral("versionlistmodel"), argc, argv);
+    }
+    {
+        TstDownload test;
+        status |= runSuite(&test, QStringLiteral("download"), argc, argv);
+    }
+    {
+        TstJsonFetcher test;
+        status |= runSuite(&test, QStringLiteral("jsonfetcher"), argc, argv);
+    }
+    {
+        TstMirror test;
+        status |= runSuite(&test, QStringLiteral("mirror"), argc, argv);
     }
     return status;
 }

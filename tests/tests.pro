@@ -17,6 +17,10 @@ HEADERS += \
     $$PWD/tst_logger.h \
     $$PWD/tst_version.h \
     $$PWD/tst_versionlistmodel.h \
+    $$PWD/tst_download.h \
+    $$PWD/tst_jsonfetcher.h \
+    $$PWD/tst_mirror.h \
+    $$PWD/TestHttpServer.h \
     $$PWD/../src/AppController.h
 
 SOURCES += \
@@ -26,4 +30,8 @@ SOURCES += \
     $$PWD/tst_logger.cpp \
     $$PWD/tst_version.cpp \
     $$PWD/tst_versionlistmodel.cpp \
+    $$PWD/tst_download.cpp \
+    $$PWD/tst_jsonfetcher.cpp \
+    $$PWD/tst_mirror.cpp \
+    $$PWD/TestHttpServer.cpp \
     $$PWD/../src/AppController.cpp

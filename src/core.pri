@@ -11,6 +11,10 @@ HEADERS += \
     $$PWD/core/VersionManifest.h \
     $$PWD/core/VersionGrouping.h \
     $$PWD/models/VersionListModel.h \
+    $$PWD/download/FileSpec.h \
+    $$PWD/download/DownloadService.h \
+    $$PWD/download/JsonFetcher.h \
+    $$PWD/download/MirrorResolver.h \
     $$PWD/platform/PlatformPaths.h
 
 SOURCES += \
@@ -21,4 +25,7 @@ SOURCES += \
     $$PWD/core/VersionManifest.cpp \
     $$PWD/core/VersionGrouping.cpp \
     $$PWD/models/VersionListModel.cpp \
+    $$PWD/download/DownloadService.cpp \
+    $$PWD/download/JsonFetcher.cpp \
+    $$PWD/download/MirrorResolver.cpp \
     $$PWD/platform/PlatformPaths.cpp
