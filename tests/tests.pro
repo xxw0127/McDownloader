@@ -21,6 +21,7 @@ HEADERS += \
     $$PWD/tst_jsonfetcher.h \
     $$PWD/tst_mirror.h \
     $$PWD/tst_vanilla.h \
+    $$PWD/tst_installcontroller.h \
     $$PWD/TestHttpServer.h \
     $$PWD/../src/AppController.h
 
@@ -35,5 +36,6 @@ SOURCES += \
     $$PWD/tst_jsonfetcher.cpp \
     $$PWD/tst_mirror.cpp \
     $$PWD/tst_vanilla.cpp \
+    $$PWD/tst_installcontroller.cpp \
     $$PWD/TestHttpServer.cpp \
     $$PWD/../src/AppController.cpp

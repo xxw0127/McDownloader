@@ -32,6 +32,15 @@ mingw32-make -j4
 .\release\tst_main.exe
 ```
 
+## 命令行安装（验收用）
+
+```powershell
+cd tools\installer-cli\build
+qmake ..\installer-cli.pro
+mingw32-make -j4
+.\release\installer-cli.exe --mc 1.20.1 --dir D:\PCL2-reverse\run\downloader-test\.minecraft --loader vanilla
+```
+
 网络集成测试需要显式开启：
 
 ```powershell

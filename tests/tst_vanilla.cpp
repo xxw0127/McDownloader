@@ -131,6 +131,16 @@ void TstVanilla::clientAndAssetIndexIncluded()
     QVERIFY(plan.files.size() >= 6);
 }
 
+void TstVanilla::assetIndexWithoutUrlSkipsDownload()
+{
+    QJsonObject version;
+    version.insert(QStringLiteral("assetIndex"), QJsonObject{{QStringLiteral("id"), QStringLiteral("5")}});
+
+    const InstallPlan plan = VanillaPlanBuilder::build(version, QStringLiteral("D:/mc"), QStringLiteral("1.20.1"));
+    QCOMPARE(plan.assetIndexId, QStringLiteral("5"));
+    QVERIFY(!containsTarget(plan.files, QStringLiteral("assets/indexes/5.json")));
+}
+
 void TstVanilla::legacyWithoutClientDoesNotCrash()
 {
     const QJsonObject version = loadObject(QStringLiteral("version_legacy_snippet.json"));

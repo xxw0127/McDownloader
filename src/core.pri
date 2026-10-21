@@ -20,6 +20,8 @@ HEADERS += \
     $$PWD/installers/LibraryResolver.h \
     $$PWD/installers/AssetResolver.h \
     $$PWD/installers/VanillaPlanBuilder.h \
+    $$PWD/installers/VanillaInstallValidator.h \
+    $$PWD/installers/InstallController.h \
     $$PWD/platform/PlatformPaths.h
 
 SOURCES += \
@@ -37,4 +39,6 @@ SOURCES += \
     $$PWD/installers/LibraryResolver.cpp \
     $$PWD/installers/AssetResolver.cpp \
     $$PWD/installers/VanillaPlanBuilder.cpp \
+    $$PWD/installers/VanillaInstallValidator.cpp \
+    $$PWD/installers/InstallController.cpp \
     $$PWD/platform/PlatformPaths.cpp

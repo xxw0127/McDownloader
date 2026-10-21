@@ -70,8 +70,11 @@ InstallPlan VanillaPlanBuilder::build(const QJsonObject& versionJson,
         if (plan.assetIndexId.isEmpty())
             plan.assetIndexId = QStringLiteral("legacy");
 
-        const QString target = QStringLiteral("assets/indexes/%1.json").arg(plan.assetIndexId);
-        plan.files.append(makeDownload(target, assetIndexObject, true));
+        if (!assetIndexObject.value(QStringLiteral("url")).toString().isEmpty())
+        {
+            const QString target = QStringLiteral("assets/indexes/%1.json").arg(plan.assetIndexId);
+            plan.files.append(makeDownload(target, assetIndexObject, true));
+        }
     }
     else if (versionJson.value(QStringLiteral("assets")).isString())
     {

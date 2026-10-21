@@ -14,6 +14,7 @@ private slots:
     void assetObjectAndLegacyPaths();
     void loggingConfigIncluded();
     void clientAndAssetIndexIncluded();
+    void assetIndexWithoutUrlSkipsDownload();
     void legacyWithoutClientDoesNotCrash();
 };
 

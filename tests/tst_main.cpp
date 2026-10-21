@@ -3,6 +3,7 @@
 
 #include "tst_checksum.h"
 #include "tst_download.h"
+#include "tst_installcontroller.h"
 #include "tst_jsonfetcher.h"
 #include "tst_logger.h"
 #include "tst_mirror.h"
@@ -73,6 +74,10 @@ int main(int argc, char *argv[])
     {
         TstVanilla test;
         status |= runSuite(&test, QStringLiteral("vanilla"), argc, argv);
+    }
+    {
+        TstInstallController test;
+        status |= runSuite(&test, QStringLiteral("installcontroller"), argc, argv);
     }
     return status;
 }

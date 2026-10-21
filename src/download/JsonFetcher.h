@@ -18,6 +18,7 @@ public:
     explicit JsonFetcher(QObject* parent = nullptr);
 
     void fetch(const QList<QUrl>& urls, int timeoutMs = 15000);
+    void cancel();
 
 signals:
     void finished(const QByteArray& body);

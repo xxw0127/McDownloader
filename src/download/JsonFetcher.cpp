@@ -40,6 +40,20 @@ void JsonFetcher::fetch(const QList<QUrl>& urls, int timeoutMs)
     startNext();
 }
 
+void JsonFetcher::cancel()
+{
+    m_timeoutTimer->stop();
+    if (m_reply != nullptr)
+    {
+        QNetworkReply* reply = m_reply;
+        m_reply = nullptr;
+        disconnect(reply, nullptr, this, nullptr);
+        reply->abort();
+        reply->deleteLater();
+    }
+    reset();
+}
+
 void JsonFetcher::startNext()
 {
     if (m_index >= m_urls.size())
