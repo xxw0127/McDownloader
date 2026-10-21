@@ -93,6 +93,29 @@ QString VersionGrouping::displayName(VersionGroup group)
     return QString();
 }
 
+QString VersionGrouping::iconPath(VersionGroup group)
+{
+    switch (group)
+    {
+    case VersionGroup::Release:
+        return QStringLiteral("qrc:/images/grass.png");
+    case VersionGroup::Snapshot:
+        return QStringLiteral("qrc:/images/command_block.png");
+    case VersionGroup::Old:
+        return QStringLiteral("qrc:/images/cobblestone.png");
+    case VersionGroup::AprilFools:
+        return QStringLiteral("qrc:/images/gold_block.png");
+    }
+    return QString();
+}
+
+QString VersionGrouping::formatReleaseTime(const QDateTime& time)
+{
+    if (!time.isValid())
+        return QString();
+    return time.toLocalTime().toString(QStringLiteral("yyyy/MM/dd HH:mm"));
+}
+
 QVector<VersionInfo> VersionGrouping::latestForCard(const QVector<VersionInfo>& versions)
 {
     VersionInfo release;

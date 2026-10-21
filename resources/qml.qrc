@@ -1,5 +1,13 @@
 <RCC>
     <qresource prefix="/">
         <file>../qml/Main.qml</file>
+        <file>../qml/components/SectionCard.qml</file>
+        <file>../qml/components/VersionRow.qml</file>
+        <file>../qml/components/LatestCard.qml</file>
+        <file>fixtures/manifest_small.json</file>
+        <file>images/grass.png</file>
+        <file>images/command_block.png</file>
+        <file>images/gold_block.png</file>
+        <file>images/cobblestone.png</file>
     </qresource>
 </RCC>

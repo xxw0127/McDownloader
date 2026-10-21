@@ -5,6 +5,7 @@
 #include "tst_logger.h"
 #include "tst_paths.h"
 #include "tst_version.h"
+#include "tst_versionlistmodel.h"
 
 namespace
 {
@@ -48,6 +49,10 @@ int main(int argc, char *argv[])
     {
         TstVersion test;
         status |= runSuite(&test, QStringLiteral("version"), argc, argv);
+    }
+    {
+        TstVersionListModel test;
+        status |= runSuite(&test, QStringLiteral("versionlistmodel"), argc, argv);
     }
     return status;
 }

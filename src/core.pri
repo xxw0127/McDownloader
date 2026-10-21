@@ -10,6 +10,7 @@ HEADERS += \
     $$PWD/core/VersionInfo.h \
     $$PWD/core/VersionManifest.h \
     $$PWD/core/VersionGrouping.h \
+    $$PWD/models/VersionListModel.h \
     $$PWD/platform/PlatformPaths.h
 
 SOURCES += \
@@ -19,4 +20,5 @@ SOURCES += \
     $$PWD/core/LoaderKind.cpp \
     $$PWD/core/VersionManifest.cpp \
     $$PWD/core/VersionGrouping.cpp \
+    $$PWD/models/VersionListModel.cpp \
     $$PWD/platform/PlatformPaths.cpp

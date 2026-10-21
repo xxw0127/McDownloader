@@ -9,15 +9,21 @@ DEFINES += TEST_FIXTURE_DIR=\\\"$$PWD/fixtures\\\"
 
 include(../src/core.pri)
 
+RESOURCES += $$PWD/../resources/qml.qrc
+
 HEADERS += \
     $$PWD/tst_paths.h \
     $$PWD/tst_checksum.h \
     $$PWD/tst_logger.h \
-    $$PWD/tst_version.h
+    $$PWD/tst_version.h \
+    $$PWD/tst_versionlistmodel.h \
+    $$PWD/../src/AppController.h
 
 SOURCES += \
     $$PWD/tst_main.cpp \
     $$PWD/tst_paths.cpp \
     $$PWD/tst_checksum.cpp \
     $$PWD/tst_logger.cpp \
-    $$PWD/tst_version.cpp
+    $$PWD/tst_version.cpp \
+    $$PWD/tst_versionlistmodel.cpp \
+    $$PWD/../src/AppController.cpp
