@@ -45,6 +45,15 @@ QList<QUrl> LoaderCatalog::indexUrls(LoaderKind kind, const QString& mcVersion)
     {
         return {QUrl(QStringLiteral("https://bmclapi2.bangbang93.com/forge/minecraft/%1").arg(mcVersion))};
     }
+    if (kind == LoaderKind::NeoForge)
+    {
+        const QString artifact = (mcVersion == QLatin1String("1.20.1")) ? QStringLiteral("forge")
+                                                                        : QStringLiteral("neoforge");
+        return {
+            QUrl(QStringLiteral("https://maven.neoforged.net/api/maven/versions/releases/net/neoforged/%1").arg(artifact)),
+            QUrl(QStringLiteral("https://bmclapi2.bangbang93.com/neoforge/meta/api/maven/details/releases/net/neoforged/%1").arg(artifact))
+        };
+    }
     return {};
 }
 
@@ -149,6 +158,49 @@ QVector<LoaderVersion> LoaderCatalog::parseIndex(LoaderKind kind,
         std::sort(result.begin(), result.end(), [](const LoaderVersion& left, const LoaderVersion& right) {
             return QVersionNumber::compare(QVersionNumber::fromString(left.version),
                                            QVersionNumber::fromString(right.version)) > 0;
+        });
+    }
+    else if (kind == LoaderKind::NeoForge)
+    {
+        if (!document.isObject())
+        {
+            setError(error, QStringLiteral("NeoForge 列表不是 JSON 对象"));
+            return {};
+        }
+
+        const QJsonObject root = document.object();
+        QStringList names;
+        for (const QJsonValue& value : root.value(QStringLiteral("versions")).toArray())
+            names.append(value.toString());
+        for (const QJsonValue& value : root.value(QStringLiteral("files")).toArray())
+            names.append(value.toObject().value(QStringLiteral("name")).toString());
+
+        const QString prefix = (mcVersion == QLatin1String("1.20.1"))
+                                   ? QStringLiteral("1.20.1-")
+                                   : (mcVersion.section(QLatin1Char('.'), 1, 1) + QLatin1Char('.') +
+                                      mcVersion.section(QLatin1Char('.'), 2, 2) + QLatin1Char('.'));
+
+        for (const QString& name : names)
+        {
+            if (!name.startsWith(prefix) || name.contains(QStringLiteral("-beta")))
+                continue;
+
+            LoaderVersion version;
+            version.version = name;
+            version.stable = QStringLiteral("neoforge");
+            result.append(version);
+        }
+
+        std::sort(result.begin(), result.end(), [mcVersion](const LoaderVersion& left, const LoaderVersion& right) {
+            QString leftVersion = left.version;
+            QString rightVersion = right.version;
+            if (mcVersion == QLatin1String("1.20.1"))
+            {
+                leftVersion = leftVersion.section(QLatin1Char('-'), 1);
+                rightVersion = rightVersion.section(QLatin1Char('-'), 1);
+            }
+            return QVersionNumber::compare(QVersionNumber::fromString(leftVersion),
+                                           QVersionNumber::fromString(rightVersion)) > 0;
         });
     }
     else

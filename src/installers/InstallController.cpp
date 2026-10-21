@@ -15,6 +15,7 @@
 #include "installers/InstallPlan.h"
 #include "installers/ForgeInstaller.h"
 #include "installers/LoaderCatalog.h"
+#include "installers/NeoForgeInstaller.h"
 #include "installers/ProfileInstaller.h"
 #include "installers/VanillaInstallValidator.h"
 #include "installers/VanillaPlanBuilder.h"
@@ -48,7 +49,8 @@ void InstallController::start(const InstallRequest& request)
     if (request.loader != LoaderKind::Vanilla &&
         request.loader != LoaderKind::Fabric &&
         request.loader != LoaderKind::Quilt &&
-        request.loader != LoaderKind::Forge)
+        request.loader != LoaderKind::Forge &&
+        request.loader != LoaderKind::NeoForge)
     {
         emit failed(QStringLiteral("该加载器尚未实现：%1").arg(loaderKindName(request.loader)));
         return;
@@ -205,6 +207,11 @@ void InstallController::handleJsonFinished(const QByteArray& body)
         if (m_request.loader == LoaderKind::Forge)
         {
             startForgeInstall();
+            return;
+        }
+        if (m_request.loader == LoaderKind::NeoForge)
+        {
+            startNeoForgeInstall();
             return;
         }
 
@@ -374,6 +381,11 @@ void InstallController::startLoaderPhase()
         startForgeInstall();
         return;
     }
+    if (m_request.loader == LoaderKind::NeoForge)
+    {
+        startNeoForgeInstall();
+        return;
+    }
 
     const QList<QUrl> urls = LoaderCatalog::profileUrls(m_request.loader,
                                                         m_versionId,
@@ -402,6 +414,39 @@ void InstallController::startForgeInstall()
                                                                           m_request.loaderVersion,
                                                                           m_request.javaPath,
                                                                           m_versionJson);
+    if (m_canceled)
+    {
+        m_stage = Stage::Idle;
+        emit canceled();
+        return;
+    }
+
+    if (!result.ok)
+    {
+        fail(result.error);
+        return;
+    }
+
+    m_loaderId = result.versionId;
+    finishInstall();
+}
+
+void InstallController::startNeoForgeInstall()
+{
+    if (!NeoForgeInstaller::isSupported(m_versionId))
+    {
+        fail(QStringLiteral("NeoForge 不支持 Minecraft %1").arg(m_versionId));
+        return;
+    }
+
+    m_stage = Stage::ForgeInstalling;
+    emit progress(0, 0, QStringLiteral("正在运行 NeoForge 安装器..."));
+
+    const NeoForgeInstallResult result = NeoForgeInstaller::install(m_minecraftDir,
+                                                                    m_versionId,
+                                                                    m_request.loaderVersion,
+                                                                    m_request.javaPath,
+                                                                    m_versionJson);
     if (m_canceled)
     {
         m_stage = Stage::Idle;

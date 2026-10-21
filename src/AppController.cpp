@@ -17,6 +17,7 @@
 #include "download/JsonFetcher.h"
 #include "download/MirrorResolver.h"
 #include "installers/LoaderCatalog.h"
+#include "installers/NeoForgeInstaller.h"
 #include "models/LoaderListModel.h"
 #include "models/VersionListModel.h"
 
@@ -321,7 +322,7 @@ QString AppController::instanceId() const
     case LoaderKind::Forge:
         return QStringLiteral("%1-forge-%2").arg(m_selectedVersion, m_loaderVersion);
     case LoaderKind::NeoForge:
-        return QStringLiteral("%1-neoforge-%2").arg(m_selectedVersion, m_loaderVersion);
+        return NeoForgeInstaller::instanceId(m_selectedVersion, m_loaderVersion);
     }
     return m_selectedVersion;
 }

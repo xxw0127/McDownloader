@@ -29,6 +29,7 @@ HEADERS += \
     $$PWD/tst_staging.h \
     $$PWD/tst_forge.h \
     $$PWD/tst_legacyforge.h \
+    $$PWD/tst_neoforge.h \
     $$PWD/TestHttpServer.h \
     $$PWD/../src/AppController.h
 
@@ -51,5 +52,6 @@ SOURCES += \
     $$PWD/tst_staging.cpp \
     $$PWD/tst_forge.cpp \
     $$PWD/tst_legacyforge.cpp \
+    $$PWD/tst_neoforge.cpp \
     $$PWD/TestHttpServer.cpp \
     $$PWD/../src/AppController.cpp

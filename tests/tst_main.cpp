@@ -10,6 +10,7 @@
 #include "tst_jsonfetcher.h"
 #include "tst_legacyforge.h"
 #include "tst_loader.h"
+#include "tst_neoforge.h"
 #include "tst_process.h"
 #include "tst_logger.h"
 #include "tst_mirror.h"
@@ -113,6 +114,10 @@ int main(int argc, char *argv[])
     {
         TstLegacyForge test;
         status |= runSuite(&test, QStringLiteral("legacyforge"), argc, argv);
+    }
+    {
+        TstNeoForge test;
+        status |= runSuite(&test, QStringLiteral("neoforge"), argc, argv);
     }
     return status;
 }

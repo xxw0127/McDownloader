@@ -33,6 +33,7 @@ HEADERS += \
     $$PWD/installers/ForgeInstaller.h \
     $$PWD/installers/ZipExtractor.h \
     $$PWD/installers/LegacyForgeExtractor.h \
+    $$PWD/installers/NeoForgeInstaller.h \
     $$PWD/platform/PlatformPaths.h \
     $$PWD/platform/PlatformProcess.h
 
@@ -63,6 +64,7 @@ SOURCES += \
     $$PWD/installers/ForgeInstaller.cpp \
     $$PWD/installers/ZipExtractor.cpp \
     $$PWD/installers/LegacyForgeExtractor.cpp \
+    $$PWD/installers/NeoForgeInstaller.cpp \
     $$PWD/../third_party/miniz/miniz.c \
     $$PWD/../third_party/miniz/miniz_tdef.c \
     $$PWD/../third_party/miniz/miniz_tinfl.c \

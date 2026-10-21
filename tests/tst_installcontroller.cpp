@@ -99,7 +99,7 @@ void TstInstallController::rejectsUnsupportedLoader()
     InstallRequest request;
     request.minecraftDir = dir.path();
     request.mcVersion = QStringLiteral("1.20.1");
-    request.loader = LoaderKind::NeoForge;
+    request.loader = static_cast<LoaderKind>(99);
     controller.start(request);
 
     QCOMPARE(failed.count(), 1);

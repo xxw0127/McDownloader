@@ -67,6 +67,7 @@ private:
     void startDownload();
     void startLoaderPhase();
     void startForgeInstall();
+    void startNeoForgeInstall();
     bool writeVersionJson(QString* error);
     bool writeJsonObject(const QString& versionId, const QJsonObject& object, QString* error);
     bool writeLauncherProfiles(QString* error);
