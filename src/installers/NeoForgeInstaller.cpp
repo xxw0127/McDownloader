@@ -93,7 +93,7 @@ bool writeLauncherProfiles(const QString& minecraftDir, QString* error)
     profiles.insert(QStringLiteral("clientToken"), QString());
     profiles.insert(QStringLiteral("authenticationDatabase"), QJsonObject());
     QJsonObject launcherVersion;
-    launcherVersion.insert(QStringLiteral("name"), QStringLiteral("PCL2Downloader"));
+    launcherVersion.insert(QStringLiteral("name"), QStringLiteral("McDownloader"));
     launcherVersion.insert(QStringLiteral("format"), 21);
     profiles.insert(QStringLiteral("launcherVersion"), launcherVersion);
 
@@ -136,7 +136,7 @@ bool downloadFile(const QList<QUrl>& urls,
         QNetworkRequest request(url);
         request.setAttribute(QNetworkRequest::RedirectPolicyAttribute,
                              QNetworkRequest::NoLessSafeRedirectPolicy);
-        request.setHeader(QNetworkRequest::UserAgentHeader, QStringLiteral("PCL2Downloader/0.1"));
+        request.setHeader(QNetworkRequest::UserAgentHeader, QStringLiteral("McDownloader/0.1"));
 
         QNetworkReply* reply = manager.get(request);
         QEventLoop loop;

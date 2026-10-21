@@ -35,7 +35,7 @@ finally {
     Pop-Location
 }
 
-$exe = Join-Path $build 'release\PCL2Downloader.exe'
+$exe = Join-Path $build 'release\McDownloader.exe'
 if (-not (Test-Path $exe)) {
     throw "未生成可执行文件：$exe"
 }
@@ -95,16 +95,16 @@ if ($Deploy -or $Package) {
 
 if ($Package) {
     $dist = Join-Path $root 'dist'
-    $stage = Join-Path $dist 'PCL2Downloader'
+    $stage = Join-Path $dist 'McDownloader'
     New-Item -ItemType Directory -Force $dist | Out-Null
     if (Test-Path $stage) { Remove-Item $stage -Recurse -Force }
     New-Item -ItemType Directory -Force $stage | Out-Null
 
-    $zip = Join-Path $dist 'PCL2Downloader-win64.zip'
+    $zip = Join-Path $dist 'McDownloader-win64.zip'
     if (Test-Path $zip) { Remove-Item $zip -Force }
 
     $release = Join-Path $build 'release'
-    Copy-Item (Join-Path $release 'PCL2Downloader.exe') $stage -Force
+    Copy-Item (Join-Path $release 'McDownloader.exe') $stage -Force
     Copy-Item (Join-Path $release '*.dll') $stage -Force
     Get-ChildItem $release -Directory |
         Where-Object { $_.Name -ne 'logs' } |

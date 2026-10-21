@@ -607,7 +607,7 @@ bool InstallController::protectVersion(const QString& versionId, QString* error)
     }
 
     const QString backupRoot = Paths::joinWithin(m_minecraftDir,
-                                                 QStringLiteral(".pcl2downloader-backup"),
+                                                 QStringLiteral(".mcdownloader-backup"),
                                                  &ok);
     if (!ok || !QDir().mkpath(backupRoot))
     {
@@ -893,7 +893,7 @@ bool InstallController::writeLauncherProfiles(QString* error)
     profiles.insert(QStringLiteral("clientToken"), QString());
     profiles.insert(QStringLiteral("authenticationDatabase"), QJsonObject());
     QJsonObject launcherVersion;
-    launcherVersion.insert(QStringLiteral("name"), QStringLiteral("PCL2Downloader"));
+    launcherVersion.insert(QStringLiteral("name"), QStringLiteral("McDownloader"));
     launcherVersion.insert(QStringLiteral("format"), 21);
     profiles.insert(QStringLiteral("launcherVersion"), launcherVersion);
 

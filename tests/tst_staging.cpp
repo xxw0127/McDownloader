@@ -61,7 +61,7 @@ void TstStaging::backsUpExistingVersion()
 
     QCOMPARE(readFile(targetJson), QByteArrayLiteral("new"));
 
-    const QDir backupDir(QDir(target.path()).filePath(QStringLiteral(".pcl2downloader-backup")));
+    const QDir backupDir(QDir(target.path()).filePath(QStringLiteral(".mcdownloader-backup")));
     const QStringList backups = backupDir.entryList(QDir::Dirs | QDir::NoDotAndDotDot);
     QCOMPARE(backups.size(), 1);
     QCOMPARE(readFile(backupDir.filePath(backups.first() + QStringLiteral("/test.json"))), QByteArrayLiteral("old"));

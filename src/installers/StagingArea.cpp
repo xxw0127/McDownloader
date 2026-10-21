@@ -28,7 +28,7 @@ bool copyDirectory(const QString& source, const QString& target, QString* error)
             return false;
         }
 
-        const QString tempFile = targetFile + QStringLiteral(".pcl2downloader-tmp");
+        const QString tempFile = targetFile + QStringLiteral(".mcdownloader-tmp");
         QFile::remove(tempFile);
         if (!QFile::copy(sourceFile, tempFile))
         {
@@ -56,7 +56,7 @@ StagingArea::StagingArea(const QString& path, const QString& minecraftPath)
 
 StagingArea StagingArea::create(const QString& targetRoot, QString* error)
 {
-    const QString tempRoot = QDir(targetRoot).filePath(QStringLiteral(".pcl2downloader-temp"));
+    const QString tempRoot = QDir(targetRoot).filePath(QStringLiteral(".mcdownloader-temp"));
     if (!QDir().mkpath(tempRoot))
     {
         *error = QStringLiteral("无法创建 staging 目录：%1").arg(tempRoot);
@@ -132,7 +132,7 @@ bool StagingArea::mergeInto(QString* error)
 
             if (targetExisted)
             {
-                const QString backupRoot = target.filePath(QStringLiteral(".pcl2downloader-backup"));
+                const QString backupRoot = target.filePath(QStringLiteral(".mcdownloader-backup"));
                 if (!QDir().mkpath(backupRoot))
                 {
                     rollback();

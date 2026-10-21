@@ -95,7 +95,7 @@ AppController::~AppController()
 
 QString AppController::appName() const
 {
-    return QStringLiteral("PCL2 下载器");
+    return QStringLiteral("McDownloader");
 }
 
 QAbstractItemModel* AppController::versionModel()

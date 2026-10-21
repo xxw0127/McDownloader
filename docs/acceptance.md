@@ -35,8 +35,8 @@ powershell -ExecutionPolicy Bypass -File scripts\run-tests.ps1 -Network
 
 - QtTest 18 个套件全部通过（138 个测试/含 init/cleanup；路径、SHA1、日志、版本分组、下载、镜像、JSON、原版计划、安装校验、AppController、Fabric/Quilt、Java、进程、Staging、Forge、Legacy Forge、NeoForge）。
 - 网络测试覆盖 BMCLAPI → Mojang 回退、请求超时和镜像失败回退；302 重定向未做自动化测试。
-- 构建产物：`build\release\PCL2Downloader.exe`
-- 打包产物：`dist\PCL2Downloader-win64.zip`
+- 构建产物：`build\release\McDownloader.exe`
+- 打包产物：`dist\McDownloader-win64.zip`
 
 ## Java 版本策略
 
@@ -58,7 +58,7 @@ powershell -ExecutionPolicy Bypass -File scripts\run-tests.ps1 -Network
 
 ## 覆盖与回滚
 
-- 原版、Fabric、Quilt 重新安装时，旧版本目录会先移动到 `.pcl2downloader-backup`；安装失败或取消会尝试恢复旧版本。
+- 原版、Fabric、Quilt 重新安装时，旧版本目录会先移动到 `.mcdownloader-backup`；安装失败或取消会尝试恢复旧版本。
 - Forge、NeoForge 使用 staging，合并时先备份旧版本；复制失败会回滚已替换的版本目录。
 - 备份不会自动删除，便于用户回退。
 

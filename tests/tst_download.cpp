@@ -151,12 +151,12 @@ void TstDownload::rejectsUnsafeRelativePath()
     DownloadService service;
     QSignalSpy failed(&service, &DownloadService::failed);
 
-    FileSpec spec = makeSpec(QStringLiteral("../escape-pcl2-downloader.bin"),
+    FileSpec spec = makeSpec(QStringLiteral("../escape-mcdownloader.bin"),
                              {server.url(QStringLiteral("/a.bin"))}, QByteArrayLiteral("abc"));
     service.start(dir.path(), {spec});
 
     if (failed.isEmpty())
         QVERIFY(failed.wait(3000));
 
-    QVERIFY(!QFile::exists(QDir(dir.path()).filePath(QStringLiteral("../escape-pcl2-downloader.bin"))));
+    QVERIFY(!QFile::exists(QDir(dir.path()).filePath(QStringLiteral("../escape-mcdownloader.bin"))));
 }

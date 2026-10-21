@@ -179,7 +179,7 @@ void DownloadService::startUrl(Task* task)
     QNetworkRequest request(url);
     request.setAttribute(QNetworkRequest::RedirectPolicyAttribute,
                          QNetworkRequest::NoLessSafeRedirectPolicy);
-    request.setHeader(QNetworkRequest::UserAgentHeader, QStringLiteral("PCL2Downloader/0.1"));
+    request.setHeader(QNetworkRequest::UserAgentHeader, QStringLiteral("McDownloader/0.1"));
 
     task->reply = m_nam->get(request);
 

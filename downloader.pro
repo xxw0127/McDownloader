@@ -1,5 +1,5 @@
 TEMPLATE = app
-TARGET = PCL2Downloader
+TARGET = McDownloader
 
 QT += quick quickcontrols2 widgets
 

@@ -70,7 +70,7 @@ void JsonFetcher::startNext()
     QNetworkRequest request(url);
     request.setAttribute(QNetworkRequest::RedirectPolicyAttribute,
                          QNetworkRequest::NoLessSafeRedirectPolicy);
-    request.setHeader(QNetworkRequest::UserAgentHeader, QStringLiteral("PCL2Downloader/0.1"));
+    request.setHeader(QNetworkRequest::UserAgentHeader, QStringLiteral("McDownloader/0.1"));
 
     m_reply = m_nam->get(request);
     connect(m_reply, &QNetworkReply::finished, this, &JsonFetcher::handleReplyFinished);

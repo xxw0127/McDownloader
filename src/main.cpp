@@ -37,15 +37,15 @@ void logQtMessage(QtMsgType type, const QMessageLogContext&, const QString& mess
 int main(int argc, char *argv[])
 {
     QApplication app(argc, argv);
-    QCoreApplication::setOrganizationName(QStringLiteral("PCL2Downloader"));
-    QCoreApplication::setApplicationName(QStringLiteral("PCL2 Downloader"));
+    QCoreApplication::setOrganizationName(QStringLiteral("McDownloader"));
+    QCoreApplication::setApplicationName(QStringLiteral("McDownloader"));
     QCoreApplication::setApplicationVersion(QStringLiteral("0.1.0"));
 
     QQuickStyle::setStyle(QStringLiteral("Basic"));
 
     Logger::init(PlatformPaths::logDir());
     qInstallMessageHandler(logQtMessage);
-    Logger::info(QStringLiteral("main"), QStringLiteral("启动 PCL2 下载器"));
+    Logger::info(QStringLiteral("main"), QStringLiteral("启动 McDownloader"));
 
     AppController controller;
     if (QCoreApplication::arguments().contains(QStringLiteral("--ui-smoke")))

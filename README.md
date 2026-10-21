@@ -1,4 +1,4 @@
-# PCL2 下载器
+# McDownloader
 
 独立的 Minecraft 下载/安装器（第一期：原版 + Fabric + Quilt + Forge + NeoForge）。
 界面为 Qt Quick/QML，风格参考 Rufus 的极简桌面工具；安装完成后由现有 PCL2 或其他启动器负责启动。
@@ -28,8 +28,8 @@ powershell -ExecutionPolicy Bypass -File scripts\run-tests.ps1 -Network
 
 输出：
 
-- 程序：`build\release\PCL2Downloader.exe`
-- 分发包：`dist\PCL2Downloader-win64.zip`
+- 程序：`build\release\McDownloader.exe`
+- 分发包：`dist\McDownloader-win64.zip`
 
 本机 Qt 的插件元数据会被 windeployqt 误判为 debug；构建脚本保留 windeployqt 尝试，并自动手工部署 release DLL、QML 和平台插件。
 
@@ -64,7 +64,7 @@ mingw32-make -j4
 
 这样 PCL2 会给 1.21.1 使用 Java 21，而不是全局默认的 Java 25。安装面板也提供可选的 `java.exe` 路径；留空时自动扫描。
 
-重新安装已有版本时，旧版本会先移动到 `.pcl2downloader-backup`，安装失败会尝试恢复。
+重新安装已有版本时，旧版本会先移动到 `.mcdownloader-backup`，安装失败会尝试恢复。
 
 准备 Java：
 
