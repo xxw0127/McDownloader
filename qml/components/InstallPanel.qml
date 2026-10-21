@@ -16,39 +16,10 @@ Rectangle {
         spacing: 12
 
         Text {
-            text: app.selectedVersion !== "" ? "安装 " + app.selectedVersion : "安装设置"
+            text: app.selectedVersion !== "" ? "安装 " + app.selectedVersion : "安装游戏"
             font.pixelSize: 15
             font.bold: true
             color: "#1F2328"
-        }
-
-        Text {
-            text: "加载器"
-            font.pixelSize: 11
-            color: "#6B7280"
-        }
-
-        FlatComboBox {
-            Layout.fillWidth: true
-            model: ["原版", "Fabric", "Quilt", "Forge", "NeoForge"]
-            currentIndex: app.loaderKind === "fabric" ? 1 : (app.loaderKind === "quilt" ? 2 : (app.loaderKind === "forge" ? 3 : (app.loaderKind === "neoforge" ? 4 : 0)))
-            onActivated: app.loaderKind = index === 1 ? "fabric" : (index === 2 ? "quilt" : (index === 3 ? "forge" : (index === 4 ? "neoforge" : "vanilla")))
-        }
-
-        Text {
-            visible: app.loaderKind !== "vanilla"
-            text: "加载器版本"
-            font.pixelSize: 11
-            color: "#6B7280"
-        }
-
-        FlatComboBox {
-            visible: app.loaderKind !== "vanilla"
-            Layout.fillWidth: true
-            model: app.loaderModel
-            textRole: "version"
-            currentIndex: 0
-            onActivated: app.loaderVersion = currentText
         }
 
         Text {

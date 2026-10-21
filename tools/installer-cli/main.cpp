@@ -3,7 +3,6 @@
 #include <QDir>
 #include <QTextStream>
 
-#include "core/LoaderKind.h"
 #include "core/Logger.h"
 #include "installers/InstallController.h"
 
@@ -14,19 +13,15 @@ int main(int argc, char* argv[])
     QCoreApplication::setApplicationVersion(QStringLiteral("0.1.0"));
 
     QCommandLineParser parser;
-    parser.setApplicationDescription(QStringLiteral("Headless Minecraft installer for acceptance tests"));
+    parser.setApplicationDescription(QStringLiteral("Headless vanilla Minecraft installer"));
     parser.addHelpOption();
     parser.addVersionOption();
 
     QCommandLineOption mcOption(QStringLiteral("mc"), QStringLiteral("Minecraft version id"), QStringLiteral("id"));
     QCommandLineOption dirOption(QStringLiteral("dir"), QStringLiteral("Target .minecraft folder"), QStringLiteral("path"));
-    QCommandLineOption loaderOption(QStringLiteral("loader"), QStringLiteral("Loader: vanilla/fabric/quilt/forge/neoforge"), QStringLiteral("name"), QStringLiteral("vanilla"));
-    QCommandLineOption loaderVersionOption(QStringLiteral("loader-version"), QStringLiteral("Loader version"), QStringLiteral("version"));
     QCommandLineOption javaOption(QStringLiteral("java"), QStringLiteral("java.exe path"), QStringLiteral("path"));
     parser.addOption(mcOption);
     parser.addOption(dirOption);
-    parser.addOption(loaderOption);
-    parser.addOption(loaderVersionOption);
     parser.addOption(javaOption);
     parser.process(app);
 
@@ -36,26 +31,14 @@ int main(int argc, char* argv[])
         return 2;
     }
 
-    const QString loaderName = parser.value(loaderOption).toLower();
-    if (!QStringList({QStringLiteral("vanilla"), QStringLiteral("fabric"), QStringLiteral("quilt"),
-                      QStringLiteral("forge"), QStringLiteral("neoforge")})
-             .contains(loaderName))
-    {
-        QTextStream(stderr) << "error: unknown loader: " << loaderName << Qt::endl;
-        return 2;
-    }
-
     InstallRequest request;
     request.mcVersion = parser.value(mcOption);
     request.minecraftDir = parser.value(dirOption);
-    request.loader = loaderKindFromName(loaderName);
-    request.loaderVersion = parser.value(loaderVersionOption);
     request.javaPath = parser.value(javaOption);
 
     Logger::init(QDir::current().filePath(QStringLiteral("logs")));
     Logger::info(QStringLiteral("cli"),
-                 QStringLiteral("install mc=%1 loader=%2 dir=%3")
-                     .arg(request.mcVersion, loaderKindName(request.loader), request.minecraftDir));
+                 QStringLiteral("install mc=%1 dir=%2").arg(request.mcVersion, request.minecraftDir));
 
     InstallController controller;
     QTextStream out(stdout);

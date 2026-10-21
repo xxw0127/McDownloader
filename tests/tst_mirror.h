@@ -12,7 +12,6 @@ private slots:
     void assetUrlsOrder();
     void metaUrlMirrorsPistonMeta();
     void libraryUrlsPreferBmclapi();
-    void quiltLibraryUrlsPreferOfficial();
 };
 
 #endif // TST_MIRROR_H

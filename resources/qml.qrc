@@ -8,7 +8,6 @@
         <file>../qml/components/FolderField.qml</file>
         <file>../qml/components/ProgressPanel.qml</file>
         <file>../qml/components/FlatButton.qml</file>
-        <file>../qml/components/FlatComboBox.qml</file>
         <file>fixtures/manifest_small.json</file>
         <file>images/grass.png</file>
         <file>images/command_block.png</file>

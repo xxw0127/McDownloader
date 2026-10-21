@@ -6,17 +6,12 @@
 #include "tst_checksum.h"
 #include "tst_download.h"
 #include "tst_installcontroller.h"
-#include "tst_forge.h"
 #include "tst_java.h"
 #include "tst_jsonfetcher.h"
-#include "tst_legacyforge.h"
-#include "tst_loader.h"
-#include "tst_neoforge.h"
 #include "tst_process.h"
 #include "tst_logger.h"
 #include "tst_mirror.h"
 #include "tst_paths.h"
-#include "tst_staging.h"
 #include "tst_vanilla.h"
 #include "tst_version.h"
 #include "tst_versionlistmodel.h"
@@ -94,32 +89,12 @@ int main(int argc, char *argv[])
         status |= runSuite(&test, QStringLiteral("appcontroller"), argc, argv);
     }
     {
-        TstLoader test;
-        status |= runSuite(&test, QStringLiteral("loader"), argc, argv);
-    }
-    {
         TstJava test;
         status |= runSuite(&test, QStringLiteral("java"), argc, argv);
     }
     {
         TstProcess test;
         status |= runSuite(&test, QStringLiteral("process"), argc, argv);
-    }
-    {
-        TstStaging test;
-        status |= runSuite(&test, QStringLiteral("staging"), argc, argv);
-    }
-    {
-        TstForge test;
-        status |= runSuite(&test, QStringLiteral("forge"), argc, argv);
-    }
-    {
-        TstLegacyForge test;
-        status |= runSuite(&test, QStringLiteral("legacyforge"), argc, argv);
-    }
-    {
-        TstNeoForge test;
-        status |= runSuite(&test, QStringLiteral("neoforge"), argc, argv);
     }
     return status;
 }

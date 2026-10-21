@@ -40,11 +40,13 @@ else {
     Remove-Item $marker -Force -ErrorAction SilentlyContinue
 }
 
+Get-ChildItem $testsBuild -Filter '*.txt' -ErrorAction SilentlyContinue | Remove-Item -Force -ErrorAction SilentlyContinue
+
 & $testExe
 $exitCode = $LASTEXITCODE
 Remove-Item $marker -Force -ErrorAction SilentlyContinue
 
-foreach ($suite in @('paths', 'checksum', 'logger', 'version', 'versionlistmodel', 'download', 'jsonfetcher', 'mirror', 'vanilla', 'installcontroller', 'appcontroller', 'loader', 'java', 'process', 'staging', 'forge', 'legacyforge', 'neoforge')) {
+foreach ($suite in @('paths', 'checksum', 'logger', 'version', 'versionlistmodel', 'download', 'jsonfetcher', 'mirror', 'vanilla', 'installcontroller', 'appcontroller', 'java', 'process')) {
     $file = Join-Path $testsBuild "$suite.txt"
     if (Test-Path $file) {
         $totals = Select-String -Path $file -Pattern '^Totals:' | Select-Object -Last 1

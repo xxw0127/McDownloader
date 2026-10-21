@@ -19,8 +19,8 @@ void TstPaths::safeRelativePaths()
 
 void TstPaths::sanitizeInstanceNames()
 {
-    QCOMPARE(Paths::sanitizeInstanceName(QStringLiteral("1.20.1/Fabric:test")),
-             QStringLiteral("1.20.1_Fabric_test"));
+    QCOMPARE(Paths::sanitizeInstanceName(QStringLiteral("1.20.1/custom:test")),
+             QStringLiteral("1.20.1_custom_test"));
     QCOMPARE(Paths::sanitizeInstanceName(QStringLiteral("1.20.1 ")), QStringLiteral("1.20.1"));
     QCOMPARE(Paths::sanitizeInstanceName(QStringLiteral("...")), QStringLiteral("instance"));
 }
