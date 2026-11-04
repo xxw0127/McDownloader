@@ -21,6 +21,7 @@ bool isInvalidNameChar(QChar c)
     switch (c.unicode())
     {
     case '/':
+    case '\\':
     case ':':
     case '*':
     case '?':
@@ -32,6 +33,19 @@ bool isInvalidNameChar(QChar c)
     default:
         return false;
     }
+}
+
+const QStringList& reservedNames()
+{
+    static const QStringList names = {
+        QStringLiteral("CON"), QStringLiteral("PRN"), QStringLiteral("AUX"), QStringLiteral("NUL"),
+        QStringLiteral("COM1"), QStringLiteral("COM2"), QStringLiteral("COM3"), QStringLiteral("COM4"),
+        QStringLiteral("COM5"), QStringLiteral("COM6"), QStringLiteral("COM7"), QStringLiteral("COM8"),
+        QStringLiteral("COM9"), QStringLiteral("LPT1"), QStringLiteral("LPT2"), QStringLiteral("LPT3"),
+        QStringLiteral("LPT4"), QStringLiteral("LPT5"), QStringLiteral("LPT6"), QStringLiteral("LPT7"),
+        QStringLiteral("LPT8"), QStringLiteral("LPT9")
+    };
+    return names;
 }
 }
 
@@ -50,15 +64,6 @@ bool Paths::isSafeRelativePath(const QString& path)
     if (segments.isEmpty())
         return false;
 
-    static const QStringList reservedNames = {
-        QStringLiteral("CON"), QStringLiteral("PRN"), QStringLiteral("AUX"), QStringLiteral("NUL"),
-        QStringLiteral("COM1"), QStringLiteral("COM2"), QStringLiteral("COM3"), QStringLiteral("COM4"),
-        QStringLiteral("COM5"), QStringLiteral("COM6"), QStringLiteral("COM7"), QStringLiteral("COM8"),
-        QStringLiteral("COM9"), QStringLiteral("LPT1"), QStringLiteral("LPT2"), QStringLiteral("LPT3"),
-        QStringLiteral("LPT4"), QStringLiteral("LPT5"), QStringLiteral("LPT6"), QStringLiteral("LPT7"),
-        QStringLiteral("LPT8"), QStringLiteral("LPT9")
-    };
-
     for (const QString& segment : segments)
     {
         if (segment == QLatin1String("..") || segment == QLatin1String("."))
@@ -67,7 +72,7 @@ bool Paths::isSafeRelativePath(const QString& path)
             return false;
 
         const QString baseName = segment.section(QLatin1Char('.'), 0, 0).toUpper();
-        if (reservedNames.contains(baseName))
+        if (reservedNames().contains(baseName))
             return false;
 
         for (const QChar c : segment)
@@ -91,6 +96,10 @@ QString Paths::sanitizeInstanceName(const QString& name)
 
     if (result.isEmpty())
         result = QStringLiteral("instance");
+
+    const QString baseName = result.section(QLatin1Char('.'), 0, 0).toUpper();
+    if (reservedNames().contains(baseName))
+        result.prepend(QLatin1Char('_'));
 
     if (result.size() > kMaxInstanceNameLength)
         result = result.left(kMaxInstanceNameLength);
