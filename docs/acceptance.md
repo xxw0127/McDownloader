@@ -7,7 +7,7 @@
 
 - 原版安装链路通过（2026-10-21 验收证据保留）。
 - Fabric/Quilt/Forge/NeoForge 的安装代码、UI 和单元测试已恢复并通过；完整网络安装/启动矩阵尚未在本次复验中重跑，状态标记为“待复验”。
-- 2026-11-04 重跑 QtTest：138 个测试全部通过（含网络测试）。
+- 2026-11-04 重跑 QtTest：144 个测试全部通过（含网络测试）。
 
 ## 环境
 
@@ -31,7 +31,7 @@ powershell -ExecutionPolicy Bypass -File scripts\run-tests.ps1 -Network
 2026-11-04 结果：
 
 - `scripts\build.ps1`：退出码 0，生成 `build\release\McDownloader.exe`。
-- `scripts\run-tests.ps1 -Network`：18 个套件、138 个测试全部通过。
+- `scripts\run-tests.ps1 -Network`：18 个套件、144 个测试全部通过。
 - UI 冒烟：`--ui-smoke --screenshot` 成功，窗口正常渲染。
 - 分发包：`dist\McDownloader-win64.zip`（单顶层 `McDownloader` 文件夹）。
 
