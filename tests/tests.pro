@@ -23,8 +23,13 @@ HEADERS += \
     $$PWD/tst_vanilla.h \
     $$PWD/tst_installcontroller.h \
     $$PWD/tst_appcontroller.h \
+    $$PWD/tst_loader.h \
     $$PWD/tst_java.h \
     $$PWD/tst_process.h \
+    $$PWD/tst_staging.h \
+    $$PWD/tst_forge.h \
+    $$PWD/tst_legacyforge.h \
+    $$PWD/tst_neoforge.h \
     $$PWD/TestHttpServer.h \
     $$PWD/../src/AppController.h
 
@@ -41,7 +46,12 @@ SOURCES += \
     $$PWD/tst_vanilla.cpp \
     $$PWD/tst_installcontroller.cpp \
     $$PWD/tst_appcontroller.cpp \
+    $$PWD/tst_loader.cpp \
     $$PWD/tst_java.cpp \
     $$PWD/tst_process.cpp \
+    $$PWD/tst_staging.cpp \
+    $$PWD/tst_forge.cpp \
+    $$PWD/tst_legacyforge.cpp \
+    $$PWD/tst_neoforge.cpp \
     $$PWD/TestHttpServer.cpp \
     $$PWD/../src/AppController.cpp

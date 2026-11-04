@@ -35,3 +35,12 @@ void TstMirror::libraryUrlsPreferBmclapi()
     QCOMPARE(urls.at(0).toString(), QStringLiteral("https://bmclapi2.bangbang93.com/maven/net/minecraft/launchwrapper/1.12/launchwrapper-1.12.jar"));
     QCOMPARE(urls.at(1), official);
 }
+
+void TstMirror::quiltLibraryUrlsPreferOfficial()
+{
+    const QUrl official(QStringLiteral("https://maven.quiltmc.org/repository/release/org/quiltmc/quilt-loader/0.23.1/quilt-loader-0.23.1.jar"));
+    const QList<QUrl> urls = MirrorResolver::libraryUrls(QStringLiteral("org/quiltmc/quilt-loader/0.23.1/quilt-loader-0.23.1.jar"), official);
+    QCOMPARE(urls.size(), 2);
+    QCOMPARE(urls.at(0), official);
+    QCOMPARE(urls.at(1).host(), QStringLiteral("bmclapi2.bangbang93.com"));
+}

@@ -7,7 +7,6 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QProcess>
-#include <QProcessEnvironment>
 #include <QSaveFile>
 
 #include "core/Logger.h"
@@ -17,9 +16,13 @@
 #include "download/JsonFetcher.h"
 #include "download/MirrorResolver.h"
 #include "installers/InstallPlan.h"
+#include "installers/ForgeInstaller.h"
 #include "installers/JavaLocator.h"
 #include "installers/JavaRequirement.h"
+#include "installers/LoaderCatalog.h"
+#include "installers/NeoForgeInstaller.h"
 #include "installers/ProcessRunner.h"
+#include "installers/ProfileInstaller.h"
 #include "installers/VanillaInstallValidator.h"
 #include "installers/VanillaPlanBuilder.h"
 
@@ -45,7 +48,17 @@ void InstallController::start(const InstallRequest& request)
 {
     if (isRunning())
     {
-        emit failed(QStringLiteral("安装正在进行"));
+        emit failed(QStringLiteral("安装已在进行"));
+        return;
+    }
+
+    if (request.loader != LoaderKind::Vanilla &&
+        request.loader != LoaderKind::Fabric &&
+        request.loader != LoaderKind::Quilt &&
+        request.loader != LoaderKind::Forge &&
+        request.loader != LoaderKind::NeoForge)
+    {
+        emit failed(QStringLiteral("该加载器尚未实现：%1").arg(loaderKindName(request.loader)));
         return;
     }
 
@@ -73,14 +86,39 @@ void InstallController::start(const InstallRequest& request)
     m_versionId = request.mcVersion;
     m_versionJson = QJsonObject();
     m_assetIndex = QJsonObject();
-    m_versionUrl = QUrl();
+    m_loaderProfile = QJsonObject();
+    m_loaderId.clear();
+    m_protectedVersionId.clear();
+    m_backupPath.clear();
+    m_createdVersionId.clear();
     m_plan = InstallPlan();
     m_canceled = false;
     m_manifestRetry = false;
     m_cancelRequested.store(false);
-    m_protectedVersionId.clear();
-    m_backupPath.clear();
-    m_createdVersionId.clear();
+    m_downloadPhase = DownloadPhase::Vanilla;
+
+    // 加载器安装优先复用已完整的父版本，避免覆盖父版本或重复下载。
+    if (request.loader != LoaderKind::Vanilla)
+    {
+        const QString baseError = VanillaInstallValidator::validate(m_minecraftDir, m_versionId);
+        if (baseError.isEmpty())
+        {
+            const QString versionJsonPath = QDir(m_minecraftDir)
+                                                .filePath(QStringLiteral("versions/%1/%1.json").arg(m_versionId));
+            QFile versionFile(versionJsonPath);
+            if (versionFile.open(QIODevice::ReadOnly))
+            {
+                const QJsonDocument document = QJsonDocument::fromJson(versionFile.readAll());
+                if (document.isObject())
+                {
+                    m_versionJson = document.object();
+                    m_stage = Stage::LoaderIndex;
+                    startLoaderPhase();
+                    return;
+                }
+            }
+        }
+    }
 
     m_stage = Stage::Manifest;
     m_jsonFetcher->fetch(MirrorResolver::manifestUrls(), 20000);
@@ -99,11 +137,13 @@ void InstallController::cancel()
         return;
 
     m_canceled = true;
-    if (m_stage == Stage::DownloadingVanilla)
+    if (m_stage == Stage::DownloadingVanilla || m_stage == Stage::DownloadingLoader)
     {
         m_downloadService->cancel();
         return;
     }
+    if (m_stage == Stage::ForgeInstalling)
+        return;
 
     m_jsonFetcher->cancel();
     restoreProtectedVersion();
@@ -200,6 +240,84 @@ void InstallController::handleJsonFinished(const QByteArray& body)
 
         m_assetIndex = document.object();
         startDownload();
+        return;
+    }
+
+    if (m_stage == Stage::LoaderIndex)
+    {
+        QString error;
+        const QVector<LoaderVersion> versions = LoaderCatalog::parseIndex(m_request.loader,
+                                                                         body,
+                                                                         m_versionId,
+                                                                         &error);
+        if (!error.isEmpty() || versions.isEmpty())
+        {
+            fail(error.isEmpty() ? QStringLiteral("没有可用的加载器版本") : error);
+            return;
+        }
+
+        m_request.loaderVersion = versions.first().version;
+        if (m_request.loader == LoaderKind::Forge)
+        {
+            startForgeInstall();
+            return;
+        }
+        if (m_request.loader == LoaderKind::NeoForge)
+        {
+            startNeoForgeInstall();
+            return;
+        }
+
+        const QList<QUrl> urls = LoaderCatalog::profileUrls(m_request.loader,
+                                                            m_versionId,
+                                                            m_request.loaderVersion);
+        if (urls.isEmpty())
+        {
+            fail(QStringLiteral("加载器 profile 地址为空"));
+            return;
+        }
+
+        m_stage = Stage::LoaderProfile;
+        m_jsonFetcher->fetch(urls, 20000);
+        return;
+    }
+
+    if (m_stage == Stage::LoaderProfile)
+    {
+        m_loaderId = ProfileInstaller::instanceId(m_request.loader,
+                                                  m_versionId,
+                                                  m_request.loaderVersion);
+        if (m_loaderId.isEmpty())
+        {
+            fail(QStringLiteral("无法生成加载器实例名"));
+            return;
+        }
+
+        QString error;
+        const QJsonObject profile = ProfileInstaller::prepareProfile(body, m_loaderId, &error);
+        if (!error.isEmpty())
+        {
+            fail(error);
+            return;
+        }
+
+        if (!protectVersion(m_loaderId, &error))
+        {
+            fail(error);
+            return;
+        }
+
+        if (!writeJsonObject(m_loaderId, profile, &error))
+        {
+            fail(error);
+            return;
+        }
+
+        m_loaderProfile = profile;
+        m_plan = ProfileInstaller::buildPlan(profile, m_minecraftDir, m_loaderId);
+        m_downloadPhase = DownloadPhase::Loader;
+        m_stage = Stage::DownloadingLoader;
+        m_downloadService->start(m_minecraftDir, m_plan.files);
     }
 }
 
@@ -227,10 +345,19 @@ void InstallController::handleDownloadFinished()
         return;
     }
 
-    if (!applyCopies(&error))
+    if (m_downloadPhase == DownloadPhase::Vanilla)
     {
-        fail(error);
-        return;
+        if (!applyCopies(&error))
+        {
+            fail(error);
+            return;
+        }
+
+        if (m_request.loader != LoaderKind::Vanilla)
+        {
+            startLoaderPhase();
+            return;
+        }
     }
 
     const QString validation = VanillaInstallValidator::validate(m_minecraftDir, m_versionId);
@@ -238,6 +365,26 @@ void InstallController::handleDownloadFinished()
     {
         fail(validation);
         return;
+    }
+
+    if (m_request.loader != LoaderKind::Vanilla && !m_loaderId.isEmpty())
+    {
+        bool ok = false;
+        const QString loaderPath = Paths::joinWithin(m_minecraftDir,
+                                                     QStringLiteral("versions/%1/%1.json").arg(m_loaderId),
+                                                     &ok);
+        if (!ok || !QFileInfo::exists(loaderPath))
+        {
+            fail(QStringLiteral("加载器版本 JSON 不存在：%1").arg(m_loaderId));
+            return;
+        }
+
+        QFile loaderFile(loaderPath);
+        if (!loaderFile.open(QIODevice::ReadOnly) || !QJsonDocument::fromJson(loaderFile.readAll()).isObject())
+        {
+            fail(QStringLiteral("加载器版本 JSON 无效：%1").arg(m_loaderId));
+            return;
+        }
     }
 
     finishInstall();
@@ -274,8 +421,132 @@ void InstallController::startDownload()
         return;
     }
 
+    m_downloadPhase = DownloadPhase::Vanilla;
     m_stage = Stage::DownloadingVanilla;
     m_downloadService->start(m_minecraftDir, m_plan.files);
+}
+
+void InstallController::startLoaderPhase()
+{
+    if (m_request.loaderVersion.isEmpty())
+    {
+        const QList<QUrl> urls = LoaderCatalog::indexUrls(m_request.loader, m_versionId);
+        if (urls.isEmpty())
+        {
+            fail(QStringLiteral("没有可用的加载器列表地址"));
+            return;
+        }
+
+        m_stage = Stage::LoaderIndex;
+        m_jsonFetcher->fetch(urls, 20000);
+        return;
+    }
+
+    if (m_request.loader == LoaderKind::Forge)
+    {
+        startForgeInstall();
+        return;
+    }
+    if (m_request.loader == LoaderKind::NeoForge)
+    {
+        startNeoForgeInstall();
+        return;
+    }
+
+    const QList<QUrl> urls = LoaderCatalog::profileUrls(m_request.loader,
+                                                        m_versionId,
+                                                        m_request.loaderVersion);
+    if (urls.isEmpty())
+    {
+        fail(QStringLiteral("没有可用的加载器 profile 地址"));
+        return;
+    }
+
+    m_stage = Stage::LoaderProfile;
+    m_jsonFetcher->fetch(urls, 20000);
+}
+
+void InstallController::startForgeInstall()
+{
+    const int requiredJava = JavaRequirement::majorForVersion(m_versionJson, m_versionId);
+    QString javaError;
+    if (!validateJavaPath(m_request.javaPath, requiredJava, &javaError))
+    {
+        fail(javaError);
+        return;
+    }
+
+    m_stage = Stage::ForgeInstalling;
+    emit progress(0, 0, QStringLiteral("正在运行 Forge 安装器..."));
+
+    const ForgeInstallResult result = ForgeInstaller::isLegacy(m_versionId)
+                                          ? ForgeInstaller::installLegacy(m_minecraftDir,
+                                                                          m_versionId,
+                                                                          m_request.loaderVersion,
+                                                                          &m_cancelRequested)
+                                          : ForgeInstaller::installModern(m_minecraftDir,
+                                                                          m_versionId,
+                                                                          m_request.loaderVersion,
+                                                                          m_request.javaPath,
+                                                                          m_versionJson,
+                                                                          &m_cancelRequested);
+    if (m_canceled || m_cancelRequested.load())
+    {
+        m_stage = Stage::Idle;
+        emit canceled();
+        return;
+    }
+
+    if (!result.ok)
+    {
+        fail(result.error);
+        return;
+    }
+
+    m_loaderId = result.versionId;
+    finishInstall();
+}
+
+void InstallController::startNeoForgeInstall()
+{
+    if (!NeoForgeInstaller::isSupported(m_versionId))
+    {
+        fail(QStringLiteral("NeoForge 不支持 Minecraft %1").arg(m_versionId));
+        return;
+    }
+
+    const int requiredJava = JavaRequirement::majorForVersion(m_versionJson, m_versionId);
+    QString javaError;
+    if (!validateJavaPath(m_request.javaPath, requiredJava, &javaError))
+    {
+        fail(javaError);
+        return;
+    }
+
+    m_stage = Stage::ForgeInstalling;
+    emit progress(0, 0, QStringLiteral("正在运行 NeoForge 安装器..."));
+
+    const NeoForgeInstallResult result = NeoForgeInstaller::install(m_minecraftDir,
+                                                                    m_versionId,
+                                                                    m_request.loaderVersion,
+                                                                    m_request.javaPath,
+                                                                    m_versionJson,
+                                                                    &m_cancelRequested);
+    if (m_canceled || m_cancelRequested.load())
+    {
+        m_stage = Stage::Idle;
+        emit canceled();
+        return;
+    }
+
+    if (!result.ok)
+    {
+        fail(result.error);
+        return;
+    }
+
+    m_loaderId = result.versionId;
+    finishInstall();
 }
 
 bool InstallController::writeVersionJson(QString* error)
@@ -404,6 +675,35 @@ void InstallController::releaseProtectedVersion()
     m_protectedVersionId.clear();
     m_backupPath.clear();
     m_createdVersionId.clear();
+}
+
+bool InstallController::validateJavaPath(const QString& javaPath,
+                                         int requiredMajor,
+                                         QString* error) const
+{
+    if (javaPath.isEmpty())
+        return true;
+
+    const QFileInfo info(javaPath);
+    if (!info.exists() || !info.isFile())
+    {
+        *error = QStringLiteral("Java 可执行文件不存在：%1").arg(javaPath);
+        return false;
+    }
+
+    const ProcessResult version = ProcessRunner::run(info.absoluteFilePath(),
+                                                     {QStringLiteral("-version")},
+                                                     QProcessEnvironment(),
+                                                     5000);
+    const JavaInfo java = JavaLocator::parseVersionOutput(version.stdOut + version.stdErr);
+    if (java.major != requiredMajor || !java.is64Bit)
+    {
+        *error = QStringLiteral("需要 64 位 Java %1，当前选择不匹配：%2")
+                     .arg(requiredMajor)
+                     .arg(javaPath);
+        return false;
+    }
+    return true;
 }
 
 void InstallController::configureJava(const QString& versionId)
@@ -567,10 +867,11 @@ bool InstallController::writePclJavaConfig(const QString& versionDir,
 
 void InstallController::finishInstall()
 {
-    configureJava(m_versionId);
+    const QString finalId = m_loaderId.isEmpty() ? m_versionId : m_loaderId;
+    configureJava(finalId);
     releaseProtectedVersion();
     m_stage = Stage::Idle;
-    emit finished(m_versionId);
+    emit finished(finalId);
 }
 
 bool InstallController::writeLauncherProfiles(QString* error)
@@ -627,7 +928,7 @@ bool InstallController::applyCopies(QString* error)
 
         if (!QFileInfo::exists(source))
         {
-            *error = QStringLiteral("资源源文件不存在：%1").arg(source);
+            *error = QStringLiteral("资源复制源不存在：%1").arg(source);
             return false;
         }
 

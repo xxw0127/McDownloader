@@ -88,6 +88,24 @@ void TstInstallController::completeInstallPasses()
     QVERIFY(VanillaInstallValidator::validate(dir.path(), QStringLiteral("1.20.1")).isEmpty());
 }
 
+void TstInstallController::rejectsUnsupportedLoader()
+{
+    QTemporaryDir dir;
+    QVERIFY(dir.isValid());
+
+    InstallController controller;
+    QSignalSpy failed(&controller, &InstallController::failed);
+
+    InstallRequest request;
+    request.minecraftDir = dir.path();
+    request.mcVersion = QStringLiteral("1.20.1");
+    request.loader = static_cast<LoaderKind>(99);
+    controller.start(request);
+
+    QCOMPARE(failed.count(), 1);
+    QVERIFY(!controller.isRunning());
+}
+
 void TstInstallController::startAndCancelAreInvokable()
 {
     InstallController controller;

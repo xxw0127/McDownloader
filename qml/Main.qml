@@ -3,16 +3,17 @@ import QtQuick.Window 2.15
 import QtQuick.Controls 2.15
 import QtQuick.Layouts 1.15
 import "components"
+import "Theme.js" as T
 
 Window {
     id: root
     visible: true
-    width: 1040
-    height: 720
-    minimumWidth: 900
-    minimumHeight: 620
+    width: 1100
+    height: 740
+    minimumWidth: 980
+    minimumHeight: 640
     title: app.appName
-    color: "#F7F7F8"
+    color: T.ground
 
     onClosing: {
         if (app.installing) {
@@ -23,86 +24,134 @@ Window {
 
     ColumnLayout {
         anchors.fill: parent
-        anchors.margins: 20
-        spacing: 12
+        spacing: 0
 
-        RowLayout {
+        AppHeader {
             Layout.fillWidth: true
-            spacing: 12
-
-            Text {
-                text: "Minecraft 版本"
-                font.pixelSize: 16
-                font.bold: true
-                color: "#1F2328"
-            }
-
-            Item { Layout.fillWidth: true }
-
-            Text {
-                text: "下载源：自动"
-                font.pixelSize: 12
-                color: "#6B7280"
-            }
         }
 
         RowLayout {
             Layout.fillWidth: true
             Layout.fillHeight: true
-            spacing: 16
+            spacing: 0
 
-            ColumnLayout {
+            // ------------------------------------------------------ version list
+            Item {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
-                Layout.preferredWidth: 640
-                spacing: 10
 
-                LatestCard {
-                    Layout.fillWidth: true
-                    release: app.latestRelease
-                    snapshot: app.latestSnapshot
-                }
+                ColumnLayout {
+                    anchors.fill: parent
+                    anchors.leftMargin: 24
+                    anchors.rightMargin: 22
+                    anchors.topMargin: 18
+                    anchors.bottomMargin: 20
+                    spacing: 14
 
-                ListView {
-                    id: versionList
-                    Layout.fillWidth: true
-                    Layout.fillHeight: true
-                    clip: true
-                    spacing: 8
-                    model: app.versionModel
-                    boundsBehavior: Flickable.StopAtBounds
-                    ScrollBar.vertical: ScrollBar { policy: ScrollBar.AsNeeded }
+                    LatestCard {
+                        Layout.fillWidth: true
+                        release: app.latestRelease
+                        snapshot: app.latestSnapshot
+                    }
 
-                    delegate: Item {
-                        width: versionList.width
-                        height: model.header ? 44 : 40
+                    RowLayout {
+                        Layout.fillWidth: true
+                        Layout.topMargin: 2
+                        Layout.leftMargin: 2
+                        Layout.rightMargin: 14
+                        spacing: 10
 
-                        SectionCard {
-                            visible: model.header
-                            anchors.fill: parent
-                            title: model.header ? model.groupName : ""
-                            count: model.header ? model.count : 0
-                            expanded: model.header ? model.expanded : false
-                            onToggled: app.versionModel.toggleGroup(model.group)
+                        Text {
+                            Layout.alignment: Qt.AlignVCenter
+                            text: "全部版本"
+                            font.family: T.fontUi
+                            font.pixelSize: 11
+                            font.weight: Font.DemiBold
+                            font.letterSpacing: 0.7
+                            color: T.ink4
                         }
 
-                        VersionRow {
-                            visible: !model.header
+                        Rectangle {
+                            Layout.fillWidth: true
+                            Layout.alignment: Qt.AlignVCenter
+                            implicitHeight: 1
+                            color: T.line
+                        }
+
+                        Text {
+                            Layout.alignment: Qt.AlignVCenter
+                            text: app.versionCount
+                            font.family: T.fontUi
+                            font.pixelSize: 11
+                            color: T.ink4
+                        }
+                    }
+
+                    Item {
+                        Layout.fillWidth: true
+                        Layout.fillHeight: true
+
+                        ListView {
+                            id: versionList
                             anchors.fill: parent
-                            versionId: model.header ? "" : model.versionId
-                            displayId: model.header ? "" : model.displayId
-                            releaseTime: model.header ? "" : model.releaseTime
-                            iconSource: model.header ? "" : model.icon
-                            selected: model.header ? false : model.selected
-                            onClicked: app.selectedVersion = model.versionId
+                            clip: true
+                            spacing: 0
+                            model: app.versionModel
+                            boundsBehavior: Flickable.StopAtBounds
+                            ScrollBar.vertical: ThinScrollBar {
+                                size: versionList.visibleArea.heightRatio
+                                visible: versionList.contentHeight > versionList.height + 2
+                            }
+
+                            delegate: Item {
+                                width: ListView.view.width
+                                height: model.header ? 44 : 56
+
+                                SectionCard {
+                                    visible: model.header
+                                    anchors.fill: parent
+                                    label: model.header ? model.groupName : ""
+                                    count: model.header ? model.count : 0
+                                    expanded: model.header ? model.expanded : false
+                                    onToggled: app.versionModel.toggleGroup(model.group)
+                                }
+
+                                VersionRow {
+                                    visible: !model.header
+                                    anchors.fill: parent
+                                    displayId: model.header ? "" : model.displayId
+                                    releaseTime: model.header ? "" : model.releaseTime
+                                    iconSource: model.header ? "" : model.icon
+                                    selected: model.header ? false : model.selected
+                                    onClicked: app.selectedVersion = model.versionId
+                                }
+                            }
+                        }
+
+                        EmptyState {
+                            anchors.fill: parent
+                            visible: versionList.count === 0
+                            text: app.statusText
                         }
                     }
                 }
             }
 
-            InstallPanel {
-                Layout.preferredWidth: 340
+            // ------------------------------------------------------ install rail
+            Item {
+                Layout.preferredWidth: 366
                 Layout.fillHeight: true
+
+                Rectangle {
+                    width: 1
+                    height: parent.height
+                    color: T.line
+                }
+
+                InstallPanel {
+                    anchors.fill: parent
+                    anchors.leftMargin: 1
+                }
             }
         }
     }

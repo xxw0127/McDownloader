@@ -1,51 +1,65 @@
 import QtQuick 2.15
 import QtQuick.Layouts 1.15
+import "../Theme.js" as T
 
-Rectangle {
-    id: card
+// Group header for the version list. Not a card: a section head that sits
+// flush left, names the channel, and rules off the full width of the column.
+Item {
+    id: header
 
-    property string title: ""
+    property string label: ""
     property int count: 0
     property bool expanded: false
+
     signal toggled()
 
-    height: 44
-    color: "#FFFFFF"
-    radius: 4
-    border.width: 1
-    border.color: "#D9DDE3"
+    implicitHeight: 40
 
     RowLayout {
         anchors.fill: parent
-        anchors.leftMargin: 14
-        anchors.rightMargin: 14
+        anchors.leftMargin: 2
+        anchors.rightMargin: 2
         spacing: 8
 
-        Text {
-            text: card.title
-            font.pixelSize: 13
-            font.bold: true
-            color: "#1F2328"
+        Caret {
+            Layout.alignment: Qt.AlignVCenter
+            expanded: header.expanded
+            stroke: mouse.containsMouse ? T.brand : T.ink3
+            Behavior on stroke { ColorAnimation { duration: 120 } }
         }
 
         Text {
-            text: card.count > 0 ? "(" + card.count + ")" : ""
+            Layout.alignment: Qt.AlignVCenter
+            text: header.label
+            font.family: T.fontUi
             font.pixelSize: 12
-            color: "#6B7280"
+            font.weight: Font.DemiBold
+            font.letterSpacing: 0.4
+            color: mouse.containsMouse ? T.ink : T.ink2
+            Behavior on color { ColorAnimation { duration: 120 } }
         }
 
-        Item { Layout.fillWidth: true }
-
         Text {
-            text: card.expanded ? "▴" : "▾"
-            font.pixelSize: 13
-            color: "#6B7280"
+            Layout.alignment: Qt.AlignVCenter
+            text: header.count
+            font.family: T.fontUi
+            font.pixelSize: 11
+            color: T.ink4
+        }
+
+        Rectangle {
+            Layout.fillWidth: true
+            Layout.preferredHeight: 1
+            Layout.leftMargin: 4
+            color: T.line
         }
     }
 
     MouseArea {
+        id: mouse
         anchors.fill: parent
+        hoverEnabled: true
         cursorShape: Qt.PointingHandCursor
-        onClicked: card.toggled()
+        onClicked: header.toggled()
     }
 }

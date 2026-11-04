@@ -5,6 +5,7 @@
 #include <QFile>
 #include <QFileDialog>
 #include <QFileInfo>
+#include <QJsonDocument>
 #include <QMetaObject>
 #include <QThread>
 #include <QUrl>
@@ -15,12 +16,17 @@
 #include "core/VersionManifest.h"
 #include "download/JsonFetcher.h"
 #include "download/MirrorResolver.h"
+#include "installers/LoaderCatalog.h"
+#include "installers/NeoForgeInstaller.h"
+#include "models/LoaderListModel.h"
 #include "models/VersionListModel.h"
 
 AppController::AppController(QObject* parent)
     : QObject(parent)
     , m_settings(new AppSettings(this))
     , m_versionModel(new VersionListModel(this))
+    , m_loaderModel(new LoaderListModel(this))
+    , m_loaderKind(QStringLiteral("vanilla"))
 {
     qRegisterMetaType<InstallRequest>("InstallRequest");
 
@@ -62,6 +68,10 @@ AppController::AppController(QObject* parent)
         m_mojangDone = true;
         tryFinishManifest();
     });
+
+    m_loaderFetcher = new JsonFetcher(this);
+    connect(m_loaderFetcher, &JsonFetcher::finished, this, &AppController::handleLoaderIndexFinished);
+    connect(m_loaderFetcher, &JsonFetcher::failed, this, &AppController::handleLoaderIndexFailed);
 }
 
 AppController::~AppController()
@@ -91,6 +101,11 @@ QString AppController::appName() const
 QAbstractItemModel* AppController::versionModel()
 {
     return m_versionModel;
+}
+
+QAbstractItemModel* AppController::loaderModel()
+{
+    return m_loaderModel;
 }
 
 QVariantMap AppController::latestRelease() const
@@ -123,6 +138,9 @@ void AppController::setSelectedVersion(const QString& versionId)
     m_versionModel->setSelectedId(versionId);
     emit selectedVersionChanged();
     emit latestChanged();
+
+    if (loaderKindFromName(m_loaderKind) != LoaderKind::Vanilla)
+        refreshLoaderVersions();
 }
 
 QString AppController::minecraftDir() const
@@ -166,6 +184,46 @@ void AppController::setJavaPath(const QString& path)
     emit javaPathChanged();
 }
 
+QString AppController::loaderKind() const
+{
+    return m_loaderKind;
+}
+
+void AppController::setLoaderKind(const QString& kind)
+{
+    const QString normalized = kind.trimmed().toLower();
+    if (m_loaderKind == normalized)
+        return;
+
+    m_loaderKind = normalized;
+    m_loaderVersion.clear();
+    m_loaderModel->setVersions({});
+    emit loaderKindChanged();
+    emit loaderVersionChanged();
+
+    if (loaderKindFromName(m_loaderKind) == LoaderKind::Vanilla)
+    {
+        setLoaderLoading(false);
+        setStatus(QStringLiteral("已选择原版"));
+        return;
+    }
+
+    refreshLoaderVersions();
+}
+
+QString AppController::loaderVersion() const
+{
+    return m_loaderVersion;
+}
+
+void AppController::setLoaderVersion(const QString& version)
+{
+    if (m_loaderVersion == version)
+        return;
+    m_loaderVersion = version;
+    emit loaderVersionChanged();
+}
+
 bool AppController::isInstalling() const
 {
     return m_installing;
@@ -186,7 +244,7 @@ void AppController::loadMockVersions()
     QFile file(QStringLiteral(":/fixtures/manifest_small.json"));
     if (!file.open(QIODevice::ReadOnly))
     {
-        setStatus(QStringLiteral("无法读取内置版本 fixture"));
+        setStatus(QStringLiteral("无法打开内置版本 fixture"));
         return;
     }
 
@@ -248,20 +306,22 @@ void AppController::startInstall()
     if (m_selectedVersion.isEmpty())
     {
         setStatus(QStringLiteral("请先选择一个 Minecraft 版本"));
-        emit error(QStringLiteral("请选择版本"));
+        emit error(QStringLiteral("请先选择版本"));
         return;
     }
 
     if (m_minecraftDir.isEmpty())
     {
-        setStatus(QStringLiteral("请选择 .minecraft 文件夹"));
-        emit error(QStringLiteral("请选择文件夹"));
+        setStatus(QStringLiteral("请先选择 .minecraft 文件夹"));
+        emit error(QStringLiteral("请先选择文件夹"));
         return;
     }
 
     InstallRequest request;
     request.minecraftDir = m_minecraftDir;
     request.mcVersion = m_selectedVersion;
+    request.loader = loaderKindFromName(m_loaderKind);
+    request.loaderVersion = m_loaderVersion;
     request.javaPath = m_javaPath;
 
     m_installing = true;
@@ -286,6 +346,7 @@ void AppController::cancelInstall()
     if (!m_installing)
         return;
     setStatus(QStringLiteral("正在取消..."));
+    // 工作线程可能阻塞在安装器进程里，先直接置取消标志。
     m_installController->requestCancel();
     QMetaObject::invokeMethod(m_installController, "cancel", Qt::QueuedConnection);
 }
@@ -298,13 +359,60 @@ void AppController::openMinecraftDir()
 
 QString AppController::instanceId() const
 {
+    if (m_selectedVersion.isEmpty())
+        return QString();
+
+    switch (loaderKindFromName(m_loaderKind))
+    {
+    case LoaderKind::Vanilla:
+        return m_selectedVersion;
+    case LoaderKind::Fabric:
+        return QStringLiteral("fabric-loader-%1-%2").arg(m_loaderVersion, m_selectedVersion);
+    case LoaderKind::Quilt:
+        return QStringLiteral("quilt-loader-%1-%2").arg(m_loaderVersion, m_selectedVersion);
+    case LoaderKind::Forge:
+        return QStringLiteral("%1-forge-%2").arg(m_selectedVersion, m_loaderVersion);
+    case LoaderKind::NeoForge:
+        return NeoForgeInstaller::instanceId(m_selectedVersion, m_loaderVersion);
+    }
     return m_selectedVersion;
+}
+
+QVariantMap AppController::selectedInfo() const
+{
+    for (const VersionInfo& version : m_versions)
+    {
+        if (version.id != m_selectedVersion || version.id.isEmpty())
+            continue;
+        QVariantMap map = versionToMap(version);
+        map.insert(QStringLiteral("groupName"),
+                   VersionGrouping::displayName(VersionGrouping::classify(version)));
+        return map;
+    }
+    return {};
+}
+
+int AppController::versionCount() const
+{
+    return m_versions.size();
 }
 
 void AppController::setVersions(const QVector<VersionInfo>& versions)
 {
     m_versions = versions;
     m_versionModel->setVersions(versions);
+
+    // A list that opens with every channel collapsed reads as an empty screen on
+    // a 900-version manifest. Open the release channel and pre-select its newest
+    // entry so the install rail has something to describe on first launch.
+    m_versionModel->setGroupExpanded(VersionGroup::Release, true);
+    if (m_selectedVersion.isEmpty() && !versions.isEmpty())
+    {
+        const VersionInfo latest = latestOfGroup(VersionGroup::Release);
+        if (!latest.id.isEmpty())
+            setSelectedVersion(latest.id);
+    }
+
     emit latestChanged();
 }
 
@@ -348,6 +456,78 @@ void AppController::setStatus(const QString& status)
         return;
     m_statusText = status;
     emit statusTextChanged();
+}
+
+void AppController::refreshLoaderVersions()
+{
+    const LoaderKind kind = loaderKindFromName(m_loaderKind);
+    if (kind == LoaderKind::Vanilla)
+    {
+        m_loaderModel->setVersions({});
+        setLoaderVersion(QString());
+        setLoaderLoading(false);
+        return;
+    }
+
+    if (m_selectedVersion.isEmpty())
+    {
+        setLoaderLoading(false);
+        setStatus(QStringLiteral("请先选择 Minecraft 版本"));
+        return;
+    }
+
+    const QList<QUrl> urls = LoaderCatalog::indexUrls(kind, m_selectedVersion);
+    if (urls.isEmpty())
+    {
+        setLoaderLoading(false);
+        setStatus(QStringLiteral("该加载器没有可用的版本列表"));
+        return;
+    }
+
+    setLoaderLoading(true);
+    setStatus(QStringLiteral("正在获取 %1 版本...").arg(loaderKindName(kind)));
+    m_loaderFetcher->fetch(urls, 20000);
+}
+
+void AppController::handleLoaderIndexFinished(const QByteArray& body)
+{
+    const LoaderKind kind = loaderKindFromName(m_loaderKind);
+    QString error;
+    const QVector<LoaderVersion> versions = LoaderCatalog::parseIndex(kind, body, m_selectedVersion, &error);
+    if (!error.isEmpty() || versions.isEmpty())
+    {
+        m_loaderModel->setVersions({});
+        setLoaderVersion(QString());
+        setLoaderLoading(false);
+        setStatus(error.isEmpty() ? QStringLiteral("没有可用的加载器版本") : error);
+        return;
+    }
+
+    m_loaderModel->setVersions(versions);
+    setLoaderVersion(versions.first().version);
+    setLoaderLoading(false);
+    setStatus(QStringLiteral("已加载 %1 个 %2 版本").arg(versions.size()).arg(loaderKindName(kind)));
+}
+
+void AppController::handleLoaderIndexFailed(const QString& error)
+{
+    m_loaderModel->setVersions({});
+    setLoaderVersion(QString());
+    setLoaderLoading(false);
+    setStatus(QStringLiteral("加载器列表获取失败：%1").arg(error));
+}
+
+void AppController::setLoaderLoading(bool loading)
+{
+    if (m_loaderLoading == loading)
+        return;
+    m_loaderLoading = loading;
+    emit loaderLoadingChanged();
+}
+
+bool AppController::isLoaderLoading() const
+{
+    return m_loaderLoading;
 }
 
 void AppController::tryFinishManifest()

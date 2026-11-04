@@ -8,6 +8,7 @@
 
 #include <atomic>
 
+#include "core/LoaderKind.h"
 #include "installers/InstallPlan.h"
 
 class DownloadService;
@@ -17,6 +18,8 @@ struct InstallRequest
 {
     QString minecraftDir;
     QString mcVersion;
+    LoaderKind loader = LoaderKind::Vanilla;
+    QString loaderVersion;
     QString javaPath;
 };
 
@@ -47,7 +50,17 @@ private:
         Manifest,
         VersionJson,
         AssetIndex,
-        DownloadingVanilla
+        DownloadingVanilla,
+        LoaderIndex,
+        LoaderProfile,
+        DownloadingLoader,
+        ForgeInstalling
+    };
+
+    enum class DownloadPhase
+    {
+        Vanilla,
+        Loader
     };
 
     void handleJsonFinished(const QByteArray& body);
@@ -57,6 +70,9 @@ private:
     void handleDownloadFailed(const QString& error);
     void handleDownloadCanceled();
     void startDownload();
+    void startLoaderPhase();
+    void startForgeInstall();
+    void startNeoForgeInstall();
     bool writeVersionJson(QString* error);
     bool writeJsonObject(const QString& versionId, const QJsonObject& object, QString* error);
     bool writeLauncherProfiles(QString* error);
@@ -64,6 +80,7 @@ private:
     bool protectVersion(const QString& versionId, QString* error);
     void restoreProtectedVersion();
     void releaseProtectedVersion();
+    bool validateJavaPath(const QString& javaPath, int requiredMajor, QString* error) const;
     void configureJava(const QString& versionId);
     bool createJavaLink(const QString& versionDir, const QString& javaPath, QString* error);
     bool writePclJavaConfig(const QString& versionDir, const QString& javaPath, QString* error);
@@ -76,10 +93,13 @@ private:
     InstallPlan m_plan;
     QJsonObject m_versionJson;
     QJsonObject m_assetIndex;
+    QJsonObject m_loaderProfile;
     QUrl m_versionUrl;
     QString m_minecraftDir;
     QString m_versionId;
+    QString m_loaderId;
     Stage m_stage = Stage::Idle;
+    DownloadPhase m_downloadPhase = DownloadPhase::Vanilla;
     bool m_canceled = false;
     bool m_manifestRetry = false;
     std::atomic_bool m_cancelRequested{false};

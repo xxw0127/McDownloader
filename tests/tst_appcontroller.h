@@ -10,7 +10,9 @@ class TstAppController : public QObject
 private slots:
     void folderValidation();
     void instanceIdForVanilla();
+    void instanceIdForFabric();
     void startWithoutVersionEmitsError();
+    void loaderKindChangeClearsVersion();
     void settingsRoundTrip();
     void startValidRequestStartsWorker();
 };

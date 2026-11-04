@@ -55,8 +55,18 @@ QList<QUrl> MirrorResolver::libraryUrls(const QString& mavenPath, const QUrl& of
     const QUrl mirror = bmclapiMaven(path);
     const QString host = official.host().toLower();
 
-    if (host == QLatin1String("libraries.minecraft.net") || host.isEmpty())
+    if (host.contains(QLatin1String("quiltmc")))
+        return {official, mirror};
+
+    if (host == QLatin1String("libraries.minecraft.net") ||
+        host == QLatin1String("maven.minecraftforge.net") ||
+        host == QLatin1String("files.minecraftforge.net") ||
+        host == QLatin1String("maven.fabricmc.net") ||
+        host == QLatin1String("maven.neoforged.net") ||
+        host.isEmpty())
+    {
         return {mirror, official};
+    }
 
     return {official};
 }
@@ -71,5 +81,9 @@ QString MirrorResolver::normalizedMavenPath(const QString& mavenPath, const QUrl
     if (!mavenPath.trimmed().isEmpty())
         return trimLeadingSlash(mavenPath.trimmed());
 
-    return trimLeadingSlash(official.path());
+    QString path = trimLeadingSlash(official.path());
+    const QString host = official.host().toLower();
+    if (host == QLatin1String("maven.neoforged.net") && path.startsWith(QLatin1String("releases/")))
+        path = path.mid(int(qstrlen("releases/")));
+    return path;
 }

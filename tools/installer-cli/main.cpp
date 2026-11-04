@@ -3,6 +3,7 @@
 #include <QDir>
 #include <QTextStream>
 
+#include "core/LoaderKind.h"
 #include "core/Logger.h"
 #include "installers/InstallController.h"
 
@@ -13,16 +14,25 @@ int main(int argc, char* argv[])
     QCoreApplication::setApplicationVersion(QStringLiteral("0.1.0"));
 
     QCommandLineParser parser;
-    parser.setApplicationDescription(QStringLiteral("Headless vanilla Minecraft installer"));
+    parser.setApplicationDescription(QStringLiteral("Headless Minecraft installer (vanilla or mod loader)"));
     parser.addHelpOption();
     parser.addVersionOption();
 
     QCommandLineOption mcOption(QStringLiteral("mc"), QStringLiteral("Minecraft version id"), QStringLiteral("id"));
     QCommandLineOption dirOption(QStringLiteral("dir"), QStringLiteral("Target .minecraft folder"), QStringLiteral("path"));
     QCommandLineOption javaOption(QStringLiteral("java"), QStringLiteral("java.exe path"), QStringLiteral("path"));
+    QCommandLineOption loaderOption(QStringLiteral("loader"),
+                                    QStringLiteral("Loader: vanilla, fabric, quilt, forge, neoforge"),
+                                    QStringLiteral("kind"),
+                                    QStringLiteral("vanilla"));
+    QCommandLineOption loaderVersionOption(QStringLiteral("loader-version"),
+                                           QStringLiteral("Loader version (required for non-vanilla)"),
+                                           QStringLiteral("version"));
     parser.addOption(mcOption);
     parser.addOption(dirOption);
     parser.addOption(javaOption);
+    parser.addOption(loaderOption);
+    parser.addOption(loaderVersionOption);
     parser.process(app);
 
     if (!parser.isSet(mcOption) || !parser.isSet(dirOption))
@@ -31,14 +41,27 @@ int main(int argc, char* argv[])
         return 2;
     }
 
+    const QString loaderName = parser.value(loaderOption).trimmed().toLower();
+    const LoaderKind loaderKind = loaderKindFromName(loaderName);
+    if (loaderKind != LoaderKind::Vanilla && !parser.isSet(loaderVersionOption))
+    {
+        QTextStream(stderr) << "error: --loader-version is required for loader "
+                            << loaderName << Qt::endl;
+        return 2;
+    }
+
     InstallRequest request;
     request.mcVersion = parser.value(mcOption);
     request.minecraftDir = parser.value(dirOption);
     request.javaPath = parser.value(javaOption);
+    request.loader = loaderKind;
+    request.loaderVersion = parser.value(loaderVersionOption);
 
     Logger::init(QDir::current().filePath(QStringLiteral("logs")));
     Logger::info(QStringLiteral("cli"),
-                 QStringLiteral("install mc=%1 dir=%2").arg(request.mcVersion, request.minecraftDir));
+                 QStringLiteral("install mc=%1 dir=%2 loader=%3 %4")
+                     .arg(request.mcVersion, request.minecraftDir,
+                          loaderKindName(loaderKind), request.loaderVersion));
 
     InstallController controller;
     QTextStream out(stdout);

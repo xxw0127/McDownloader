@@ -1,8 +1,8 @@
 # McDownloader
 
-独立的 Minecraft 原版下载/安装器。界面为 Qt Quick/QML；安装完成后由 PCL2 或其他启动器启动。
+独立的 Minecraft 下载/安装器。界面为 Qt Quick/QML；安装完成后由 PCL2 或其他启动器启动。
 
-当前只保留原版安装：Fabric、Quilt、Forge、NeoForge、OptiFine 相关功能和代码已移除。
+支持原版，以及 Fabric、Quilt、Forge、NeoForge 四种模组加载器。OptiFine 未包含。
 
 ## 工具链
 
@@ -43,6 +43,11 @@ mingw32-make -j4
 
 .\release\installer-cli.exe --mc 1.20.1 --dir D:\PCL2-reverse\run\downloader-test\.minecraft
 .\release\installer-cli.exe --mc 1.20.1 --dir ... --java <java17>\bin\java.exe
+
+# 模组加载器（--loader 后必须跟 --loader-version）
+.\release\installer-cli.exe --mc 1.20.1 --dir ... --loader fabric --loader-version 0.20.1
+.\release\installer-cli.exe --mc 1.20.1 --dir ... --loader forge --loader-version 47.3.0
+.\release\installer-cli.exe --mc 1.20.1 --dir ... --loader neoforge --loader-version 47.1.100
 ```
 
 ## Java 版本

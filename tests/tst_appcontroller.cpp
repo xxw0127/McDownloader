@@ -24,8 +24,18 @@ void TstAppController::folderValidation()
 void TstAppController::instanceIdForVanilla()
 {
     AppController controller;
+    controller.setLoaderKind(QStringLiteral("vanilla"));
     controller.setSelectedVersion(QStringLiteral("1.20.1"));
     QCOMPARE(controller.instanceId(), QStringLiteral("1.20.1"));
+}
+
+void TstAppController::instanceIdForFabric()
+{
+    AppController controller;
+    controller.setLoaderKind(QStringLiteral("fabric"));
+    controller.setLoaderVersion(QStringLiteral("0.15.11"));
+    controller.setSelectedVersion(QStringLiteral("1.20.1"));
+    QCOMPARE(controller.instanceId(), QStringLiteral("fabric-loader-0.15.11-1.20.1"));
 }
 
 void TstAppController::startWithoutVersionEmitsError()
@@ -38,6 +48,14 @@ void TstAppController::startWithoutVersionEmitsError()
 
     QCOMPARE(error.count(), 1);
     QVERIFY(!controller.isInstalling());
+}
+
+void TstAppController::loaderKindChangeClearsVersion()
+{
+    AppController controller;
+    controller.setLoaderVersion(QStringLiteral("1.0"));
+    controller.setLoaderKind(QStringLiteral("fabric"));
+    QVERIFY(controller.loaderVersion().isEmpty());
 }
 
 void TstAppController::startValidRequestStartsWorker()
