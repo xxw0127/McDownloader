@@ -9,6 +9,7 @@ class TstJsonFetcher : public QObject
 
 private slots:
     void fallsBackToSecondJsonUrl();
+    void invalidJsonFallsBackToSecondUrl();
     void timeoutEmitsFailed();
     void fetchesRealManifestWhenEnabled();
 };

@@ -26,6 +26,25 @@ void TstJsonFetcher::fallsBackToSecondJsonUrl()
     QVERIFY(finished.first().at(0).toByteArray().contains("ok"));
 }
 
+void TstJsonFetcher::invalidJsonFallsBackToSecondUrl()
+{
+    TestHttpServer server;
+    QVERIFY(server.start());
+    server.setResponse(QStringLiteral("/broken.json"), 200, QByteArrayLiteral("<html>not json</html>"));
+    server.setResponse(QStringLiteral("/good.json"), 200, QByteArrayLiteral("{\"ok\":true}"));
+
+    JsonFetcher fetcher;
+    QSignalSpy finished(&fetcher, &JsonFetcher::finished);
+    QSignalSpy failed(&fetcher, &JsonFetcher::failed);
+    fetcher.fetch({server.url(QStringLiteral("/broken.json")), server.url(QStringLiteral("/good.json"))});
+
+    QVERIFY(finished.wait(5000));
+    QVERIFY(finished.first().at(0).toByteArray().contains("ok"));
+    QCOMPARE(server.requestCount(QStringLiteral("/broken.json")), 1);
+    QCOMPARE(server.requestCount(QStringLiteral("/good.json")), 1);
+    QVERIFY(failed.isEmpty());
+}
+
 void TstJsonFetcher::timeoutEmitsFailed()
 {
     TestHttpServer server;

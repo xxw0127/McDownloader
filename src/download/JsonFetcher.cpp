@@ -1,5 +1,7 @@
 #include "download/JsonFetcher.h"
 
+#include <QJsonDocument>
+#include <QJsonParseError>
 #include <QNetworkAccessManager>
 #include <QNetworkReply>
 #include <QNetworkRequest>
@@ -96,12 +98,24 @@ void JsonFetcher::handleReplyFinished()
 
     if (error == QNetworkReply::NoError && status >= 200 && status < 300 && !body.isEmpty())
     {
-        reset();
-        emit finished(body);
-        return;
+        QJsonParseError parseError;
+        QJsonDocument::fromJson(body, &parseError);
+        if (parseError.error == QJsonParseError::NoError)
+        {
+            reset();
+            emit finished(body);
+            return;
+        }
+
+        m_lastError = QStringLiteral("%1（JSON 无效：%2）")
+                          .arg(m_urls.at(m_index).toString())
+                          .arg(parseError.errorString());
+    }
+    else
+    {
+        m_lastError = QStringLiteral("%1（HTTP %2，%3）").arg(m_urls.at(m_index).toString()).arg(status).arg(errorText);
     }
 
-    m_lastError = QStringLiteral("%1（HTTP %2，%3）").arg(m_urls.at(m_index).toString()).arg(status).arg(errorText);
     ++m_index;
     startNext();
 }
