@@ -131,6 +131,18 @@ void InstallController::start(const InstallRequest& request)
                 }
             }
         }
+        else
+        {
+            // 父版本 JSON 已存在但不完整时不能静默重装并覆盖用户修改；
+            // 让用户先修复/删除父版本，再安装加载器。
+            const QString versionJsonPath = QDir(m_minecraftDir)
+                                                .filePath(QStringLiteral("versions/%1/%1.json").arg(m_versionId));
+            if (QFileInfo::exists(versionJsonPath))
+            {
+                fail(QStringLiteral("父版本不完整，请先修复或删除 %1：%2").arg(m_versionId, baseError));
+                return;
+            }
+        }
     }
 
     m_stage = Stage::Manifest;
@@ -175,6 +187,17 @@ void InstallController::handleJsonFinished(const QByteArray& body)
         const QVector<VersionInfo> versions = VersionManifest::parse(body, &error);
         if (!error.isEmpty())
         {
+            if (!m_manifestRetry)
+            {
+                m_manifestRetry = true;
+                const QList<QUrl> urls = MirrorResolver::manifestUrls();
+                if (urls.size() >= 2)
+                {
+                    m_stage = Stage::Manifest;
+                    m_jsonFetcher->fetch({urls.at(1)}, 20000);
+                    return;
+                }
+            }
             fail(error);
             return;
         }

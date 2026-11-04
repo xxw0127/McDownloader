@@ -63,10 +63,12 @@ if ($Deploy -or $Package) {
     if (Test-Path $windeployqt) {
         $deployArgs = @('--qmldir', (Join-Path $root 'qml'), '--release', '--no-translations',
                         '--compiler-runtime', '--no-plugins', $exe)
-        Start-Process -FilePath $windeployqt -ArgumentList $deployArgs -Wait -NoNewWindow -ErrorAction SilentlyContinue | Out-Null
+        $deploy = Start-Process -FilePath $windeployqt -ArgumentList $deployArgs -Wait -NoNewWindow -PassThru -ErrorAction SilentlyContinue
         # 本机 windeployqt 会把 release 插件误判为 debug 并以非 0 退出；
-        # 后面的手工部署会补齐 DLL/QML/插件，因此这里不能把它的退出码当成构建失败。
-        $global:LASTEXITCODE = 0
+        # 后面的手工部署会补齐 DLL/QML/插件，因此这里只警告，不把它当成构建失败。
+        if ($deploy -and $deploy.ExitCode -ne 0) {
+            Write-Warning "windeployqt 退出码 $($deploy.ExitCode)（已知的插件误判，继续手工部署）"
+        }
     }
 
     Copy-Item (Join-Path $QtDir 'bin\Qt5*.dll') $release -Force
@@ -118,4 +120,9 @@ if ($Package) {
     Write-Host "打包完成：$zip"
 }
 
+if ($Deploy -and -not (Test-Path (Join-Path $release 'platforms\qwindows.dll'))) {
+    throw '部署后缺少 platforms\qwindows.dll'
+}
+
 Write-Host "构建完成：$exe"
+exit 0

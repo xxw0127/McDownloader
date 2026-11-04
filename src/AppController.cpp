@@ -32,7 +32,7 @@ AppController::AppController(QObject* parent)
     qRegisterMetaType<InstallRequest>("InstallRequest");
 
     m_minecraftDir = m_settings->minecraftDir();
-    if (m_minecraftDir.isEmpty())
+    if (m_minecraftDir.isEmpty() || isRejectedGameDir(m_minecraftDir))
         m_minecraftDir = QDir::homePath() + QStringLiteral("/.minecraft");
     QDir().mkpath(m_minecraftDir);
     m_javaPath = m_settings->javaPath();
@@ -92,6 +92,21 @@ AppController::~AppController()
             m_installThread->setParent(nullptr);
         }
     }
+}
+
+bool AppController::isRejectedGameDir(const QString& path)
+{
+    if (path.trimmed().isEmpty())
+        return false;
+
+    const QString normalized = QDir::cleanPath(QFileInfo(path).absoluteFilePath()).toLower();
+    const QString appDir = QDir::cleanPath(QCoreApplication::applicationDirPath()).toLower();
+    const QString systemRoot = QDir::cleanPath(qEnvironmentVariable("SystemRoot")).toLower();
+    const bool isProgramDir = normalized == appDir || normalized.startsWith(appDir + QLatin1Char('/'));
+    const bool isWindowsDir = !systemRoot.isEmpty() &&
+                              (normalized == systemRoot ||
+                               normalized.startsWith(systemRoot + QLatin1Char('/')));
+    return isProgramDir || isWindowsDir;
 }
 
 QString AppController::appName() const
@@ -166,14 +181,7 @@ void AppController::setMinecraftDir(const QString& path)
     if (m_minecraftDir == absolute)
         return;
 
-    const QString normalized = QDir::cleanPath(absolute).toLower();
-    const QString appDir = QDir::cleanPath(QCoreApplication::applicationDirPath()).toLower();
-    const QString systemRoot = QDir::cleanPath(qEnvironmentVariable("SystemRoot")).toLower();
-    const bool isProgramDir = normalized == appDir || normalized.startsWith(appDir + QLatin1Char('/'));
-    const bool isWindowsDir = !systemRoot.isEmpty() &&
-                              (normalized == systemRoot ||
-                               normalized.startsWith(systemRoot + QLatin1Char('/')));
-    if (isProgramDir || isWindowsDir)
+    if (isRejectedGameDir(absolute))
     {
         setStatus(QStringLiteral("不能选择程序目录或 Windows 系统目录：%1").arg(path));
         emit error(QStringLiteral("请选择其他 .minecraft 文件夹"));

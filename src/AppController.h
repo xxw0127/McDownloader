@@ -71,6 +71,7 @@ public:
     Q_INVOKABLE void cancelInstall();
     Q_INVOKABLE void openMinecraftDir();
     Q_INVOKABLE QString instanceId() const;
+    static bool isRejectedGameDir(const QString& path);
 
 signals:
     void latestChanged();

@@ -99,8 +99,9 @@ void JsonFetcher::handleReplyFinished()
     if (error == QNetworkReply::NoError && status >= 200 && status < 300 && !body.isEmpty())
     {
         QJsonParseError parseError;
-        QJsonDocument::fromJson(body, &parseError);
-        if (parseError.error == QJsonParseError::NoError)
+        const QJsonDocument document = QJsonDocument::fromJson(body, &parseError);
+        if (parseError.error == QJsonParseError::NoError &&
+            (document.isObject() || document.isArray()))
         {
             reset();
             emit finished(body);
@@ -109,7 +110,9 @@ void JsonFetcher::handleReplyFinished()
 
         m_lastError = QStringLiteral("%1（JSON 无效：%2）")
                           .arg(m_urls.at(m_index).toString())
-                          .arg(parseError.errorString());
+                          .arg(parseError.error != QJsonParseError::NoError
+                                   ? parseError.errorString()
+                                   : QStringLiteral("顶层不是对象或数组"));
     }
     else
     {

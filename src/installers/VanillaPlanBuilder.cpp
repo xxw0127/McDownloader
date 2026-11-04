@@ -5,6 +5,7 @@
 #include "download/MirrorResolver.h"
 #include "installers/AssetResolver.h"
 #include "installers/LibraryResolver.h"
+#include "platform/PlatformProcess.h"
 
 namespace
 {
@@ -51,8 +52,8 @@ InstallPlan VanillaPlanBuilder::build(const QJsonObject& versionJson,
     }
 
     const QVector<LibraryFile> libraries = LibraryResolver::resolve(versionJson,
-                                                                   QStringLiteral("windows"),
-                                                                   QStringLiteral("x64"));
+                                                                   PlatformProcess::minecraftOsName(),
+                                                                   PlatformProcess::minecraftArch());
     for (const LibraryFile& library : libraries)
     {
         FileSpec file;

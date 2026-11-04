@@ -24,6 +24,8 @@ void TstAppController::folderValidation()
 
 void TstAppController::rejectsProgramDirectory()
 {
+    QVERIFY(AppController::isRejectedGameDir(QCoreApplication::applicationDirPath()));
+
     AppController controller;
     const QString original = controller.minecraftDir();
     QSignalSpy error(&controller, &AppController::error);

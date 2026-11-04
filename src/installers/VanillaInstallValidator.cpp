@@ -7,7 +7,9 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 
+#include "core/Paths.h"
 #include "installers/LibraryResolver.h"
+#include "platform/PlatformProcess.h"
 
 QString VanillaInstallValidator::validate(const QString& minecraftDir, const QString& versionId)
 {
@@ -34,10 +36,13 @@ QString VanillaInstallValidator::validate(const QString& minecraftDir, const QSt
     }
 
     const QVector<LibraryFile> libraries = LibraryResolver::resolve(versionJson,
-                                                                   QStringLiteral("windows"),
-                                                                   QStringLiteral("x64"));
+                                                                   PlatformProcess::minecraftOsName(),
+                                                                   PlatformProcess::minecraftArch());
     for (const LibraryFile& library : libraries)
     {
+        if (!Paths::isSafeRelativePath(library.relativePath))
+            return QStringLiteral("库路径不安全：%1").arg(library.relativePath);
+
         const QString libraryPath = root.filePath(library.relativePath);
         if (!QFileInfo::exists(libraryPath))
             return QStringLiteral("库文件不存在：%1").arg(libraryPath);

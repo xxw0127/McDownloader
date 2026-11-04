@@ -90,6 +90,8 @@ bool Paths::isSafeVersionId(const QString& id)
 {
     if (id.isEmpty() || id.size() > kMaxInstanceNameLength)
         return false;
+    if (id.contains(QLatin1Char('/')) || id.contains(QLatin1Char('\\')) || id.contains(QLatin1Char(':')))
+        return false;
     return isSafeRelativePath(QStringLiteral("versions/%1/%1.json").arg(id));
 }
 
@@ -112,6 +114,12 @@ QString Paths::sanitizeInstanceName(const QString& name)
 
     if (result.size() > kMaxInstanceNameLength)
         result = result.left(kMaxInstanceNameLength);
+
+    while (result.endsWith(QLatin1Char(' ')) || result.endsWith(QLatin1Char('.')))
+        result.chop(1);
+
+    if (result.isEmpty())
+        result = QStringLiteral("instance");
 
     return result;
 }

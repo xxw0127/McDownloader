@@ -14,6 +14,20 @@ QString PlatformProcess::javaExecutableName()
 #endif
 }
 
+QString PlatformProcess::minecraftOsName()
+{
+#ifdef Q_OS_WIN
+    return QStringLiteral("windows");
+#else
+    return QStringLiteral("linux");
+#endif
+}
+
+QString PlatformProcess::minecraftArch()
+{
+    return sizeof(void*) == 8 ? QStringLiteral("x64") : QStringLiteral("x86");
+}
+
 QStringList PlatformProcess::commonJavaRoots()
 {
 #ifdef Q_OS_WIN
@@ -52,7 +66,8 @@ bool PlatformProcess::createDirectoryLink(const QString& link, const QString& ta
     }
 
 #ifdef Q_OS_WIN
-    if (QFileInfo::exists(link))
+    const QFileInfo linkInfo(link);
+    if (linkInfo.exists() || linkInfo.isSymLink())
         QProcess::execute(QStringLiteral("cmd.exe"),
                           {QStringLiteral("/c"), QStringLiteral("rmdir"),
                            QDir::toNativeSeparators(link)});

@@ -87,7 +87,42 @@ void TstInstallController::missingLibraryFails()
     writeJson(QDir(dir.path()).filePath(QStringLiteral("versions/1.20.1/1.20.1.json")), version);
     writeFile(QDir(dir.path()).filePath(QStringLiteral("versions/1.20.1/1.20.1.jar")), QByteArrayLiteral("jar"));
 
-    QVERIFY(!VanillaInstallValidator::validate(dir.path(), QStringLiteral("1.20.1")).isEmpty());
+    const QString error = VanillaInstallValidator::validate(dir.path(), QStringLiteral("1.20.1"));
+    QVERIFY(error.contains(QStringLiteral("库文件")));
+}
+
+void TstInstallController::incompleteBaseIsNotOverwritten()
+{
+    QTemporaryDir dir;
+    QVERIFY(dir.isValid());
+    const QString versionPath = QDir(dir.path()).filePath(QStringLiteral("versions/1.20.1/1.20.1.json"));
+    QJsonObject version;
+    version.insert(QStringLiteral("downloads"), QJsonObject{
+        {QStringLiteral("client"), QJsonObject{{QStringLiteral("size"), 1}}}
+    });
+    version.insert(QStringLiteral("libraries"), QJsonArray{
+        QJsonObject{{QStringLiteral("name"), QStringLiteral("org.example:demo:1.0")}}
+    });
+    writeJson(versionPath, version);
+    writeFile(QDir(dir.path()).filePath(QStringLiteral("versions/1.20.1/1.20.1.jar")), QByteArrayLiteral("jar"));
+    QFile before(versionPath);
+    QVERIFY(before.open(QIODevice::ReadOnly));
+    const QByteArray original = before.readAll();
+    before.close();
+
+    InstallController controller;
+    QSignalSpy failed(&controller, &InstallController::failed);
+    InstallRequest request;
+    request.minecraftDir = dir.path();
+    request.mcVersion = QStringLiteral("1.20.1");
+    request.loader = LoaderKind::Fabric;
+    request.loaderVersion = QStringLiteral("0.15.11");
+    controller.start(request);
+
+    QCOMPARE(failed.count(), 1);
+    QFile after(versionPath);
+    QVERIFY(after.open(QIODevice::ReadOnly));
+    QCOMPARE(after.readAll(), original);
 }
 
 void TstInstallController::completeInstallPasses()
@@ -99,7 +134,13 @@ void TstInstallController::completeInstallPasses()
         {QStringLiteral("client"), QJsonObject{{QStringLiteral("size"), 1}}}
     });
     version.insert(QStringLiteral("assetIndex"), QJsonObject{{QStringLiteral("id"), QStringLiteral("5")}});
+    version.insert(QStringLiteral("libraries"), QJsonArray{
+        QJsonObject{{QStringLiteral("name"), QStringLiteral("org.example:demo:1.0")}}
+    });
     writeJson(QDir(dir.path()).filePath(QStringLiteral("versions/1.20.1/1.20.1.json")), version);
+    writeFile(QDir(dir.path()).filePath(
+                  QStringLiteral("libraries/org/example/demo/1.0/demo-1.0.jar")),
+              QByteArrayLiteral("jar"));
     writeFile(QDir(dir.path()).filePath(QStringLiteral("versions/1.20.1/1.20.1.jar")), QByteArrayLiteral("jar"));
     writeFile(QDir(dir.path()).filePath(QStringLiteral("assets/indexes/5.json")), QByteArrayLiteral("{}"));
 

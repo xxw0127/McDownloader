@@ -13,6 +13,7 @@ private slots:
     void missingClientJarFails();
     void missingAssetIndexFails();
     void missingLibraryFails();
+    void incompleteBaseIsNotOverwritten();
     void completeInstallPasses();
     void rejectsUnsupportedLoader();
     void rejectsUnsafeVersionId();

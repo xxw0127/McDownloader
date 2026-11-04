@@ -4,6 +4,7 @@
 #include <QDir>
 #include <QFileInfo>
 #include <QStandardPaths>
+#include <QTemporaryFile>
 
 bool PlatformPaths::isCaseInsensitiveFileSystem()
 {
@@ -24,31 +25,50 @@ QString PlatformPaths::defaultMinecraftDir()
     return QDir(QStandardPaths::writableLocation(QStandardPaths::HomeLocation)).filePath(QStringLiteral(".minecraft"));
 }
 
+namespace
+{
+bool canWriteDirectory(const QString& path)
+{
+    if (path.isEmpty())
+        return false;
+
+    QDir dir(path);
+    if (!dir.exists() && !QDir().mkpath(path))
+        return false;
+
+    QTemporaryFile probe(dir.filePath(QStringLiteral("mcdownloader-write-XXXXXX")));
+    if (!probe.open())
+        return false;
+    probe.close();
+    return true;
+}
+}
+
 QString PlatformPaths::chooseWritableDir(const QString& preferred, const QString& fallback)
 {
-    if (!preferred.isEmpty() && QFileInfo(preferred).isDir() && QFileInfo(preferred).isWritable())
+    if (canWriteDirectory(preferred))
         return QDir(preferred).absolutePath();
 
-    if (!fallback.isEmpty())
-    {
-        QDir().mkpath(fallback);
-        if (QFileInfo(fallback).isDir() && QFileInfo(fallback).isWritable())
-            return QDir(fallback).absolutePath();
-    }
+    if (canWriteDirectory(fallback))
+        return QDir(fallback).absolutePath();
 
-    return QDir(preferred).absolutePath();
+    return QString();
 }
 
 QString PlatformPaths::logDir()
 {
     const QString fallback = QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation);
-    return QDir(chooseWritableDir(QCoreApplication::applicationDirPath(), fallback))
-        .filePath(QStringLiteral("logs"));
+    QString dir = chooseWritableDir(QCoreApplication::applicationDirPath(), fallback);
+    if (dir.isEmpty())
+        dir = QDir::homePath() + QStringLiteral("/.mcdownloader");
+    return QDir(dir).filePath(QStringLiteral("logs"));
 }
 
 QString PlatformPaths::configPath()
 {
     const QString fallback = QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation);
-    return QDir(chooseWritableDir(QCoreApplication::applicationDirPath(), fallback))
-        .filePath(QStringLiteral("config.ini"));
+    QString dir = chooseWritableDir(QCoreApplication::applicationDirPath(), fallback);
+    if (dir.isEmpty())
+        dir = QDir::homePath() + QStringLiteral("/.mcdownloader");
+    return QDir(dir).filePath(QStringLiteral("config.ini"));
 }
