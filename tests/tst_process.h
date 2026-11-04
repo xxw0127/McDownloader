@@ -13,6 +13,7 @@ private slots:
     void timesOut();
     void reportsMissingExecutable();
     void cancelStopsRunningProcess();
+    void createsDirectoryLink();
 };
 
 #endif // TST_PROCESS_H

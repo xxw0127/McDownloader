@@ -1,5 +1,10 @@
 #include "platform/PlatformProcess.h"
 
+#include <QDir>
+#include <QFile>
+#include <QFileInfo>
+#include <QProcess>
+
 QString PlatformProcess::javaExecutableName()
 {
 #ifdef Q_OS_WIN
@@ -35,4 +40,41 @@ QString PlatformProcess::cmdExecutable()
 #else
     return QStringLiteral("/bin/sh");
 #endif
+}
+
+bool PlatformProcess::createDirectoryLink(const QString& link, const QString& target, QString* error)
+{
+    if (link.isEmpty() || target.isEmpty())
+    {
+        if (error != nullptr)
+            *error = QStringLiteral("目录链接参数为空");
+        return false;
+    }
+
+#ifdef Q_OS_WIN
+    if (QFileInfo::exists(link))
+        QProcess::execute(QStringLiteral("cmd.exe"),
+                          {QStringLiteral("/c"), QStringLiteral("rmdir"),
+                           QDir::toNativeSeparators(link)});
+    const int code = QProcess::execute(QStringLiteral("cmd.exe"),
+                                       {QStringLiteral("/c"), QStringLiteral("mklink"),
+                                        QStringLiteral("/J"), QDir::toNativeSeparators(link),
+                                        QDir::toNativeSeparators(target)});
+    if (code != 0)
+    {
+        if (error != nullptr)
+            *error = QStringLiteral("无法创建目录链接：%1").arg(link);
+        return false;
+    }
+#else
+    if (QFileInfo::exists(link))
+        QDir(link).removeRecursively();
+    if (!QFile::link(target, link))
+    {
+        if (error != nullptr)
+            *error = QStringLiteral("无法创建目录链接：%1").arg(link);
+        return false;
+    }
+#endif
+    return true;
 }

@@ -23,6 +23,7 @@
 #include "installers/NeoForgeInstaller.h"
 #include "installers/ProcessRunner.h"
 #include "installers/ProfileInstaller.h"
+#include "platform/PlatformProcess.h"
 #include "installers/VanillaInstallValidator.h"
 #include "installers/VanillaPlanBuilder.h"
 
@@ -799,30 +800,7 @@ bool InstallController::createJavaLink(const QString& versionDir,
     if (QFileInfo::exists(link) && QFileInfo::exists(QDir(link).filePath(QStringLiteral("bin/java.exe"))))
         return true;
 
-#ifdef Q_OS_WIN
-    if (QFileInfo::exists(link))
-        QProcess::execute(QStringLiteral("cmd.exe"),
-                          {QStringLiteral("/c"), QStringLiteral("rmdir"),
-                           QDir::toNativeSeparators(link)});
-    const int code = QProcess::execute(QStringLiteral("cmd.exe"),
-                                       {QStringLiteral("/c"), QStringLiteral("mklink"),
-                                        QStringLiteral("/J"), QDir::toNativeSeparators(link),
-                                        QDir::toNativeSeparators(javaRoot)});
-    if (code != 0)
-    {
-        *error = QStringLiteral("无法创建版本 Java 目录链接");
-        return false;
-    }
-#else
-    if (QFileInfo::exists(link))
-        QDir(link).removeRecursively();
-    if (!QFile::link(javaRoot, link))
-    {
-        *error = QStringLiteral("无法创建版本 Java 符号链接");
-        return false;
-    }
-#endif
-    return true;
+    return PlatformProcess::createDirectoryLink(link, javaRoot, error);
 }
 
 bool InstallController::writePclJavaConfig(const QString& versionDir,

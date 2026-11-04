@@ -1,6 +1,10 @@
 #include "tst_process.h"
 
+#include <QDir>
+#include <QFile>
+#include <QFileInfo>
 #include <QProcessEnvironment>
+#include <QTemporaryDir>
 
 #include <atomic>
 #include <chrono>
@@ -51,6 +55,24 @@ void TstProcess::reportsMissingExecutable()
         1000);
     QCOMPARE(result.exitCode, -1);
     QVERIFY(!result.stdErr.isEmpty());
+}
+
+void TstProcess::createsDirectoryLink()
+{
+    QTemporaryDir dir;
+    QVERIFY(dir.isValid());
+    const QString target = dir.filePath(QStringLiteral("target"));
+    const QString link = dir.filePath(QStringLiteral("link"));
+    QVERIFY(QDir().mkpath(target));
+    QFile marker(QDir(target).filePath(QStringLiteral("marker.txt")));
+    QVERIFY(marker.open(QIODevice::WriteOnly));
+    marker.write("ok");
+    marker.close();
+
+    QString error;
+    QVERIFY2(PlatformProcess::createDirectoryLink(link, target, &error), qPrintable(error));
+    QVERIFY(QFileInfo(link).isDir());
+    QVERIFY(QFileInfo(QDir(link).filePath(QStringLiteral("marker.txt"))).exists());
 }
 
 void TstProcess::cancelStopsRunningProcess()
