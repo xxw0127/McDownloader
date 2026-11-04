@@ -1,5 +1,6 @@
 #include "tst_appcontroller.h"
 
+#include <QCoreApplication>
 #include <QDir>
 #include <QSignalSpy>
 #include <QTemporaryDir>
@@ -19,6 +20,18 @@ void TstAppController::folderValidation()
     QVERIFY(dir.isValid());
     controller.setMinecraftDir(dir.path());
     QCOMPARE(controller.minecraftDir(), QDir(dir.path()).absolutePath());
+}
+
+void TstAppController::rejectsProgramDirectory()
+{
+    AppController controller;
+    const QString original = controller.minecraftDir();
+    QSignalSpy error(&controller, &AppController::error);
+
+    controller.setMinecraftDir(QCoreApplication::applicationDirPath());
+
+    QCOMPARE(controller.minecraftDir(), original);
+    QCOMPARE(error.count(), 1);
 }
 
 void TstAppController::instanceIdForVanilla()

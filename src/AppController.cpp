@@ -1,5 +1,6 @@
 #include "AppController.h"
 
+#include <QCoreApplication>
 #include <QDesktopServices>
 #include <QDir>
 #include <QFile>
@@ -164,6 +165,20 @@ void AppController::setMinecraftDir(const QString& path)
     const QString absolute = info.absoluteFilePath();
     if (m_minecraftDir == absolute)
         return;
+
+    const QString normalized = QDir::cleanPath(absolute).toLower();
+    const QString appDir = QDir::cleanPath(QCoreApplication::applicationDirPath()).toLower();
+    const QString systemRoot = QDir::cleanPath(qEnvironmentVariable("SystemRoot")).toLower();
+    const bool isProgramDir = normalized == appDir || normalized.startsWith(appDir + QLatin1Char('/'));
+    const bool isWindowsDir = !systemRoot.isEmpty() &&
+                              (normalized == systemRoot ||
+                               normalized.startsWith(systemRoot + QLatin1Char('/')));
+    if (isProgramDir || isWindowsDir)
+    {
+        setStatus(QStringLiteral("不能选择程序目录或 Windows 系统目录：%1").arg(path));
+        emit error(QStringLiteral("请选择其他 .minecraft 文件夹"));
+        return;
+    }
 
     m_minecraftDir = absolute;
     m_settings->setMinecraftDir(absolute);

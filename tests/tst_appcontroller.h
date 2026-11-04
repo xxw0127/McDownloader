@@ -9,6 +9,7 @@ class TstAppController : public QObject
 
 private slots:
     void folderValidation();
+    void rejectsProgramDirectory();
     void instanceIdForVanilla();
     void instanceIdForFabric();
     void startWithoutVersionEmitsError();
