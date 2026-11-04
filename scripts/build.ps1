@@ -63,11 +63,11 @@ if ($Deploy -or $Package) {
     if (Test-Path $windeployqt) {
         $deployArgs = @('--qmldir', (Join-Path $root 'qml'), '--release', '--no-translations',
                         '--compiler-runtime', '--no-plugins', $exe)
-        $deploy = Start-Process -FilePath $windeployqt -ArgumentList $deployArgs -Wait -NoNewWindow -PassThru -ErrorAction SilentlyContinue
+        $deployProcess = Start-Process -FilePath $windeployqt -ArgumentList $deployArgs -Wait -NoNewWindow -PassThru -ErrorAction SilentlyContinue
         # 本机 windeployqt 会把 release 插件误判为 debug 并以非 0 退出；
         # 后面的手工部署会补齐 DLL/QML/插件，因此这里只警告，不把它当成构建失败。
-        if ($deploy -and $deploy.ExitCode -ne 0) {
-            Write-Warning "windeployqt 退出码 $($deploy.ExitCode)（已知的插件误判，继续手工部署）"
+        if ($deployProcess -and $deployProcess.ExitCode -ne 0) {
+            Write-Warning "windeployqt 退出码 $($deployProcess.ExitCode)（已知的插件误判，继续手工部署）"
         }
     }
 
