@@ -3,6 +3,7 @@
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
+#include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QSignalSpy>
@@ -69,6 +70,23 @@ void TstInstallController::missingAssetIndexFails()
     version.insert(QStringLiteral("assetIndex"), QJsonObject{{QStringLiteral("id"), QStringLiteral("5")}});
     writeJson(QDir(dir.path()).filePath(QStringLiteral("versions/1.20.1/1.20.1.json")), version);
     writeFile(QDir(dir.path()).filePath(QStringLiteral("versions/1.20.1/1.20.1.jar")), QByteArrayLiteral("jar"));
+    QVERIFY(!VanillaInstallValidator::validate(dir.path(), QStringLiteral("1.20.1")).isEmpty());
+}
+
+void TstInstallController::missingLibraryFails()
+{
+    QTemporaryDir dir;
+    QVERIFY(dir.isValid());
+    QJsonObject version;
+    version.insert(QStringLiteral("downloads"), QJsonObject{
+        {QStringLiteral("client"), QJsonObject{{QStringLiteral("size"), 1}}}
+    });
+    version.insert(QStringLiteral("libraries"), QJsonArray{
+        QJsonObject{{QStringLiteral("name"), QStringLiteral("org.example:demo:1.0")}}
+    });
+    writeJson(QDir(dir.path()).filePath(QStringLiteral("versions/1.20.1/1.20.1.json")), version);
+    writeFile(QDir(dir.path()).filePath(QStringLiteral("versions/1.20.1/1.20.1.jar")), QByteArrayLiteral("jar"));
+
     QVERIFY(!VanillaInstallValidator::validate(dir.path(), QStringLiteral("1.20.1")).isEmpty());
 }
 

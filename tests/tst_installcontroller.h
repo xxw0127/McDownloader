@@ -12,6 +12,7 @@ private slots:
     void invalidVersionJsonFails();
     void missingClientJarFails();
     void missingAssetIndexFails();
+    void missingLibraryFails();
     void completeInstallPasses();
     void rejectsUnsupportedLoader();
     void rejectsUnsafeVersionId();

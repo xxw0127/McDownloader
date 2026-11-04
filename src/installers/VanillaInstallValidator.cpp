@@ -3,8 +3,11 @@
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
+#include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
+
+#include "installers/LibraryResolver.h"
 
 QString VanillaInstallValidator::validate(const QString& minecraftDir, const QString& versionId)
 {
@@ -28,6 +31,16 @@ QString VanillaInstallValidator::validate(const QString& minecraftDir, const QSt
         const QString jarPath = root.filePath(QStringLiteral("versions/%1/%1.jar").arg(versionId));
         if (!QFileInfo::exists(jarPath))
             return QStringLiteral("客户端 jar 不存在：%1").arg(jarPath);
+    }
+
+    const QVector<LibraryFile> libraries = LibraryResolver::resolve(versionJson,
+                                                                   QStringLiteral("windows"),
+                                                                   QStringLiteral("x64"));
+    for (const LibraryFile& library : libraries)
+    {
+        const QString libraryPath = root.filePath(library.relativePath);
+        if (!QFileInfo::exists(libraryPath))
+            return QStringLiteral("库文件不存在：%1").arg(libraryPath);
     }
 
     const QJsonObject assetIndex = versionJson.value(QStringLiteral("assetIndex")).toObject();
