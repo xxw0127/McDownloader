@@ -10,6 +10,7 @@ class TstPaths : public QObject
 private slots:
     void safeRelativePaths();
     void sanitizeInstanceNames();
+    void safeVersionIds();
     void isWithinRoot();
 };
 

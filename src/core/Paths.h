@@ -7,6 +7,7 @@ class Paths
 {
 public:
     static bool isSafeRelativePath(const QString& path);
+    static bool isSafeVersionId(const QString& id);
     static QString sanitizeInstanceName(const QString& name);
     static bool isWithin(const QString& root, const QString& candidate);
     static QString joinWithin(const QString& root, const QString& relative, bool* ok);

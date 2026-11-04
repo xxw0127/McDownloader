@@ -106,6 +106,22 @@ void TstInstallController::rejectsUnsupportedLoader()
     QVERIFY(!controller.isRunning());
 }
 
+void TstInstallController::rejectsUnsafeVersionId()
+{
+    QTemporaryDir dir;
+    QVERIFY(dir.isValid());
+
+    InstallController controller;
+    QSignalSpy failed(&controller, &InstallController::failed);
+    InstallRequest request;
+    request.minecraftDir = dir.path();
+    request.mcVersion = QStringLiteral("../escape");
+    controller.start(request);
+
+    QCOMPARE(failed.count(), 1);
+    QVERIFY(!QFileInfo::exists(QDir(dir.path()).filePath(QStringLiteral("../escape"))));
+}
+
 void TstInstallController::startAndCancelAreInvokable()
 {
     InstallController controller;

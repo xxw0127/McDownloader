@@ -68,6 +68,18 @@ void InstallController::start(const InstallRequest& request)
         return;
     }
 
+    if (!Paths::isSafeVersionId(request.mcVersion))
+    {
+        emit failed(QStringLiteral("Minecraft 版本名包含非法路径字符：%1").arg(request.mcVersion));
+        return;
+    }
+
+    if (!request.loaderVersion.isEmpty() && !Paths::isSafeVersionId(request.loaderVersion))
+    {
+        emit failed(QStringLiteral("加载器版本名包含非法路径字符：%1").arg(request.loaderVersion));
+        return;
+    }
+
     const QDir target(request.minecraftDir);
     m_minecraftDir = target.absolutePath();
     if (!QDir().mkpath(m_minecraftDir))

@@ -28,6 +28,16 @@ void TstPaths::sanitizeInstanceNames()
     QCOMPARE(Paths::sanitizeInstanceName(QStringLiteral("COM1.txt")), QStringLiteral("_COM1.txt"));
 }
 
+void TstPaths::safeVersionIds()
+{
+    QVERIFY(Paths::isSafeVersionId(QStringLiteral("1.20.1")));
+    QVERIFY(Paths::isSafeVersionId(QStringLiteral("fabric-loader-0.15.11-1.20.1")));
+    QVERIFY(!Paths::isSafeVersionId(QStringLiteral("../escape")));
+    QVERIFY(!Paths::isSafeVersionId(QStringLiteral("1.20.1/../../x")));
+    QVERIFY(!Paths::isSafeVersionId(QStringLiteral("CON")));
+    QVERIFY(!Paths::isSafeVersionId(QString()));
+}
+
 void TstPaths::isWithinRoot()
 {
     QString root = QDir::tempPath();

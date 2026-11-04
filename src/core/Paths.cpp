@@ -84,6 +84,13 @@ bool Paths::isSafeRelativePath(const QString& path)
     return true;
 }
 
+bool Paths::isSafeVersionId(const QString& id)
+{
+    if (id.isEmpty() || id.size() > kMaxInstanceNameLength)
+        return false;
+    return isSafeRelativePath(QStringLiteral("versions/%1/%1.json").arg(id));
+}
+
 QString Paths::sanitizeInstanceName(const QString& name)
 {
     QString result;
