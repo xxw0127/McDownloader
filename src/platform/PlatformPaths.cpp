@@ -5,6 +5,15 @@
 #include <QFileInfo>
 #include <QStandardPaths>
 
+bool PlatformPaths::isCaseInsensitiveFileSystem()
+{
+#ifdef Q_OS_WIN
+    return true;
+#else
+    return false;
+#endif
+}
+
 QString PlatformPaths::defaultMinecraftDir()
 {
 #ifdef Q_OS_WIN

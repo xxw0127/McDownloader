@@ -3,6 +3,8 @@
 #include <QDir>
 #include <QFileInfo>
 
+#include "platform/PlatformPaths.h"
+
 namespace
 {
 const int kMaxInstanceNameLength = 100;
@@ -122,10 +124,11 @@ bool Paths::isWithin(const QString& root, const QString& candidate)
     QString cleanRoot = QDir::cleanPath(normalizeSeparators(root));
     QString cleanCandidate = QDir::cleanPath(normalizeSeparators(candidate));
 
-#ifdef Q_OS_WIN
-    cleanRoot = cleanRoot.toLower();
-    cleanCandidate = cleanCandidate.toLower();
-#endif
+    if (PlatformPaths::isCaseInsensitiveFileSystem())
+    {
+        cleanRoot = cleanRoot.toLower();
+        cleanCandidate = cleanCandidate.toLower();
+    }
 
     if (cleanCandidate == cleanRoot)
         return true;
