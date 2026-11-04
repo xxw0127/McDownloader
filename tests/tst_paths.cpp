@@ -1,6 +1,10 @@
 #include "tst_paths.h"
 
+#include <QFileInfo>
+#include <QTemporaryDir>
+
 #include "core/Paths.h"
+#include "platform/PlatformPaths.h"
 
 void TstPaths::safeRelativePaths()
 {
@@ -36,6 +40,17 @@ void TstPaths::safeVersionIds()
     QVERIFY(!Paths::isSafeVersionId(QStringLiteral("1.20.1/../../x")));
     QVERIFY(!Paths::isSafeVersionId(QStringLiteral("CON")));
     QVERIFY(!Paths::isSafeVersionId(QString()));
+}
+
+void TstPaths::writableDirFallback()
+{
+    QTemporaryDir dir;
+    QVERIFY(dir.isValid());
+    const QString fallback = dir.filePath(QStringLiteral("fallback"));
+    const QString result = PlatformPaths::chooseWritableDir(
+        QStringLiteral("Z:/definitely/not/writable"), fallback);
+    QCOMPARE(result, QDir(fallback).absolutePath());
+    QVERIFY(QFileInfo(fallback).isDir());
 }
 
 void TstPaths::isWithinRoot()

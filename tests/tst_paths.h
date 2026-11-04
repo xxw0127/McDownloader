@@ -11,6 +11,7 @@ private slots:
     void safeRelativePaths();
     void sanitizeInstanceNames();
     void safeVersionIds();
+    void writableDirFallback();
     void isWithinRoot();
 };
 

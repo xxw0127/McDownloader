@@ -2,6 +2,7 @@
 
 #include <QCoreApplication>
 #include <QDir>
+#include <QFileInfo>
 #include <QStandardPaths>
 
 QString PlatformPaths::defaultMinecraftDir()
@@ -14,12 +15,31 @@ QString PlatformPaths::defaultMinecraftDir()
     return QDir(QStandardPaths::writableLocation(QStandardPaths::HomeLocation)).filePath(QStringLiteral(".minecraft"));
 }
 
+QString PlatformPaths::chooseWritableDir(const QString& preferred, const QString& fallback)
+{
+    if (!preferred.isEmpty() && QFileInfo(preferred).isDir() && QFileInfo(preferred).isWritable())
+        return QDir(preferred).absolutePath();
+
+    if (!fallback.isEmpty())
+    {
+        QDir().mkpath(fallback);
+        if (QFileInfo(fallback).isDir() && QFileInfo(fallback).isWritable())
+            return QDir(fallback).absolutePath();
+    }
+
+    return QDir(preferred).absolutePath();
+}
+
 QString PlatformPaths::logDir()
 {
-    return QDir(QCoreApplication::applicationDirPath()).filePath(QStringLiteral("logs"));
+    const QString fallback = QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation);
+    return QDir(chooseWritableDir(QCoreApplication::applicationDirPath(), fallback))
+        .filePath(QStringLiteral("logs"));
 }
 
 QString PlatformPaths::configPath()
 {
-    return QDir(QCoreApplication::applicationDirPath()).filePath(QStringLiteral("config.ini"));
+    const QString fallback = QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation);
+    return QDir(chooseWritableDir(QCoreApplication::applicationDirPath(), fallback))
+        .filePath(QStringLiteral("config.ini"));
 }
