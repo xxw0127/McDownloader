@@ -179,6 +179,16 @@ void TstInstallController::rejectsUnsafeVersionId()
 
     QCOMPARE(failed.count(), 1);
     QVERIFY(!QFileInfo::exists(QDir(dir.path()).filePath(QStringLiteral("../escape"))));
+
+    InstallController loaderController;
+    QSignalSpy loaderFailed(&loaderController, &InstallController::failed);
+    InstallRequest loaderRequest;
+    loaderRequest.minecraftDir = dir.path();
+    loaderRequest.mcVersion = QStringLiteral("1.20.1");
+    loaderRequest.loader = LoaderKind::Fabric;
+    loaderRequest.loaderVersion = QStringLiteral("../escape");
+    loaderController.start(loaderRequest);
+    QCOMPARE(loaderFailed.count(), 1);
 }
 
 void TstInstallController::startAndCancelAreInvokable()
