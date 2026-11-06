@@ -1,4 +1,4 @@
-#include "tst_download.h"
+﻿#include "tst_download.h"
 
 #include <QCryptographicHash>
 #include <QDir>
@@ -66,10 +66,34 @@ void TstDownload::fallsBackToSecondUrl()
                                    QByteArrayLiteral("ok"));
     service.start(dir.path(), {spec});
 
-    QVERIFY(finished.wait(5000));
+    QVERIFY(finished.wait(15000));
     QVERIFY(QFile::exists(dir.path() + QStringLiteral("/good.bin")));
-    QCOMPARE(server.requestCount(QStringLiteral("/bad.bin")), 1);
+    QCOMPARE(server.requestCount(QStringLiteral("/bad.bin")), 4);
     QCOMPARE(server.requestCount(QStringLiteral("/good.bin")), 1);
+}
+
+void TstDownload::retriesSameUrlBeforeFallingBack()
+{
+    TestHttpServer server;
+    QVERIFY(server.start());
+    TestHttpServer::Response first{500, QByteArray(), 0};
+    TestHttpServer::Response second{500, QByteArray(), 0};
+    TestHttpServer::Response third{200, QByteArrayLiteral("ok"), 0};
+    server.setSequence(QStringLiteral("/flaky.bin"), {first, second, third});
+
+    QTemporaryDir dir;
+    QVERIFY(dir.isValid());
+
+    DownloadService service;
+    QSignalSpy finished(&service, &DownloadService::finished);
+    const FileSpec spec = makeSpec(QStringLiteral("flaky.bin"),
+                                   {server.url(QStringLiteral("/flaky.bin"))},
+                                   QByteArrayLiteral("ok"));
+    service.start(dir.path(), {spec});
+
+    QVERIFY(finished.wait(15000));
+    QCOMPARE(server.requestCount(QStringLiteral("/flaky.bin")), 3);
+    QVERIFY(QFile::exists(dir.path() + QStringLiteral("/flaky.bin")));
 }
 
 void TstDownload::rejectsBadSha1()
@@ -87,7 +111,7 @@ void TstDownload::rejectsBadSha1()
     FileSpec spec = makeSpec(QStringLiteral("bad.bin"), {server.url(QStringLiteral("/bad.bin"))}, QByteArrayLiteral("good"));
     service.start(dir.path(), {spec});
 
-    QVERIFY(failed.wait(5000));
+    QVERIFY(failed.wait(15000));
     QVERIFY(!QFile::exists(dir.path() + QStringLiteral("/bad.bin")));
 }
 

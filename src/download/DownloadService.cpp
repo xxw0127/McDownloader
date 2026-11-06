@@ -21,6 +21,7 @@ struct DownloadService::Task
     QFile* file = nullptr;
     QTimer* watchdog = nullptr;
     qint64 received = 0;
+    int attempt = 0;
 };
 
 DownloadService::DownloadService(QObject* parent)
@@ -354,6 +355,19 @@ void DownloadService::failAttempt(Task* task, const QString& error)
     if (ok)
         QFile::remove(target + QStringLiteral(".part"));
 
+    if (!m_canceled && m_running && task->attempt < 3)
+    {
+        const int delayMs = 1000 * (1 << task->attempt);
+        ++task->attempt;
+        QTimer::singleShot(delayMs, this, [this, task]() {
+            if (!m_running || m_canceled || !m_active.contains(task))
+                return;
+            startTask(task);
+        });
+        return;
+    }
+
+    task->attempt = 0;
     ++task->urlIndex;
     if (task->urlIndex < task->spec.urls.size())
     {

@@ -10,6 +10,7 @@ class TstDownload : public QObject
 private slots:
     void downloadsAndVerifies();
     void fallsBackToSecondUrl();
+    void retriesSameUrlBeforeFallingBack();
     void rejectsBadSha1();
     void skipsExistingValidFile();
     void cancelLeavesNoFinalFile();

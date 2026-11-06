@@ -26,6 +26,11 @@ void TestHttpServer::setResponse(const QString& path, int status, const QByteArr
     m_responses.insert(path, response);
 }
 
+void TestHttpServer::setSequence(const QString& path, const QList<Response>& responses)
+{
+    m_sequences.insert(path, responses);
+}
+
 int TestHttpServer::requestCount(const QString& path) const
 {
     return m_requestCounts.value(path, 0);
@@ -74,7 +79,9 @@ void TestHttpServer::incomingConnection(qintptr socketDescriptor)
         m_requestCounts[path] = m_requestCounts.value(path, 0) + 1;
         socket->setProperty("responded", true);
 
-        const Response response = m_responses.value(path, Response{404, QByteArrayLiteral("not found"), 0});
+        Response response = m_responses.value(path, Response{404, QByteArrayLiteral("not found"), 0});
+        if (m_sequences.contains(path) && !m_sequences[path].isEmpty())
+            response = m_sequences[path].takeFirst();
         const QByteArray statusText = response.status == 200 ? QByteArrayLiteral("OK")
                                       : response.status == 404 ? QByteArrayLiteral("Not Found")
                                                                : QByteArrayLiteral("Error");

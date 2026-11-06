@@ -20,6 +20,7 @@ public:
     bool start();
     QUrl url(const QString& path) const;
     void setResponse(const QString& path, int status, const QByteArray& body, int delayMs = 0);
+    void setSequence(const QString& path, const QList<Response>& responses);
     int requestCount(const QString& path) const;
 
 protected:
@@ -27,6 +28,7 @@ protected:
 
 private:
     QHash<QString, Response> m_responses;
+    QHash<QString, QList<Response>> m_sequences;
     mutable QHash<QString, int> m_requestCounts;
 };
 
