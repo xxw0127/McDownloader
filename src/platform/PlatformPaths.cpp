@@ -55,6 +55,17 @@ QString PlatformPaths::chooseWritableDir(const QString& preferred, const QString
     return QString();
 }
 
+QString PlatformPaths::cacheDir()
+{
+    const QString fallback = QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation);
+    QString dir = chooseWritableDir(QCoreApplication::applicationDirPath(), fallback);
+    if (dir.isEmpty())
+        dir = QDir::homePath() + QStringLiteral("/.mcdownloader");
+    dir = QDir(dir).filePath(QStringLiteral("cache"));
+    QDir().mkpath(dir);
+    return dir;
+}
+
 QString PlatformPaths::logDir()
 {
     const QString fallback = QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation);

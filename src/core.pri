@@ -11,6 +11,7 @@ HEADERS += \
     $$PWD/core/VersionInfo.h \
     $$PWD/core/AppSettings.h \
     $$PWD/core/VersionManifest.h \
+    $$PWD/core/ManifestCache.h \
     $$PWD/core/VersionGrouping.h \
     $$PWD/models/VersionListModel.h \
     $$PWD/models/LoaderListModel.h \
@@ -45,6 +46,7 @@ SOURCES += \
     $$PWD/core/LoaderKind.cpp \
     $$PWD/core/AppSettings.cpp \
     $$PWD/core/VersionManifest.cpp \
+    $$PWD/core/ManifestCache.cpp \
     $$PWD/core/VersionGrouping.cpp \
     $$PWD/models/VersionListModel.cpp \
     $$PWD/models/LoaderListModel.cpp \

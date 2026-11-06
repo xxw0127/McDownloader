@@ -9,6 +9,7 @@ public:
     static QString defaultMinecraftDir();
     static bool isCaseInsensitiveFileSystem();
     static QString chooseWritableDir(const QString& preferred, const QString& fallback);
+    static QString cacheDir();
     static QString logDir();
     static QString configPath();
 };

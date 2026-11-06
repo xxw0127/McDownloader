@@ -13,6 +13,7 @@
 
 #include "core/AppSettings.h"
 #include "core/Logger.h"
+#include "core/ManifestCache.h"
 #include "core/VersionGrouping.h"
 #include "core/VersionManifest.h"
 #include "download/JsonFetcher.h"
@@ -576,8 +577,32 @@ void AppController::tryFinishManifest()
 
     if (merged.isEmpty())
     {
-        setStatus(QStringLiteral("版本列表获取失败"));
+        QByteArray cached;
+        QString cacheError;
+        if (ManifestCache::load(&cached, &cacheError))
+        {
+            QString parseError;
+            const QVector<VersionInfo> cachedVersions = VersionManifest::parse(cached, &parseError);
+            if (!cachedVersions.isEmpty())
+            {
+                setVersions(cachedVersions);
+                setStatus(QStringLiteral("已加载离线缓存的 %1 个版本").arg(cachedVersions.size()));
+                return;
+            }
+        }
+
+        if (!cacheError.isEmpty())
+            Logger::warn(QStringLiteral("manifest"), cacheError);
+        setStatus(QStringLiteral("版本列表获取失败，且没有可用的离线缓存"));
         return;
+    }
+
+    const QByteArray cacheBody = !m_bmclapiBody.isEmpty() ? m_bmclapiBody : m_mojangBody;
+    if (!cacheBody.isEmpty())
+    {
+        QString cacheError;
+        if (!ManifestCache::save(cacheBody, &cacheError))
+            Logger::warn(QStringLiteral("manifest"), cacheError);
     }
 
     setVersions(merged);

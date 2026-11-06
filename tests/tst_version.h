@@ -17,6 +17,8 @@ private slots:
     void latestCardSkipsOlderSnapshot();
     void mergePrefersNewerMetadata();
     void mergeDeduplicatesAndPrefersSecondaryOnTie();
+    void cacheRoundTrip();
+    void cacheRejectsCorruptFile();
 
 private:
     QVector<VersionInfo> parseFixture() const;

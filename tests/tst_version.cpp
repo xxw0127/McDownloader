@@ -1,6 +1,11 @@
 #include "tst_version.h"
 
 #include <QFile>
+#include <QTemporaryDir>
+
+#include "core/ManifestCache.h"
+
+#include <QFile>
 
 #include "core/VersionGrouping.h"
 #include "core/VersionManifest.h"
@@ -120,4 +125,39 @@ void TstVersion::mergeDeduplicatesAndPrefersSecondaryOnTie()
     const QVector<VersionInfo> merged = VersionManifest::merge({primary}, {secondary});
     QCOMPARE(merged.size(), 1);
     QCOMPARE(merged[0].url, secondary.url);
+}
+
+void TstVersion::cacheRoundTrip()
+{
+    QTemporaryDir dir;
+    QVERIFY(dir.isValid());
+    const QString path = dir.filePath(QStringLiteral("version_manifest.json"));
+    const QByteArray body = QByteArrayLiteral(
+        "{\"versions\":[{\"id\":\"1.20.1\",\"type\":\"release\","
+        "\"releaseTime\":\"2023-06-12T13:25:51+00:00\","
+        "\"url\":\"https://example/1.20.1.json\"}]}");
+
+    QString error;
+    QVERIFY(ManifestCache::saveTo(path, body, &error));
+    QVERIFY2(error.isEmpty(), qPrintable(error));
+
+    QByteArray loaded;
+    QVERIFY(ManifestCache::loadFrom(path, &loaded, &error));
+    QCOMPARE(loaded, body);
+}
+
+void TstVersion::cacheRejectsCorruptFile()
+{
+    QTemporaryDir dir;
+    QVERIFY(dir.isValid());
+    const QString path = dir.filePath(QStringLiteral("version_manifest.json"));
+    QFile file(path);
+    QVERIFY(file.open(QIODevice::WriteOnly));
+    file.write("<html>not json</html>");
+    file.close();
+
+    QByteArray loaded;
+    QString error;
+    QVERIFY(!ManifestCache::loadFrom(path, &loaded, &error));
+    QVERIFY(!error.isEmpty());
 }
