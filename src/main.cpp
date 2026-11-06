@@ -1,4 +1,4 @@
-#include <QApplication>
+﻿#include <QApplication>
 #include <QFont>
 #include <QIcon>
 #include <QImage>
@@ -49,7 +49,7 @@ int main(int argc, char *argv[])
     QApplication app(argc, argv);
     QCoreApplication::setOrganizationName(QStringLiteral("McDownloader"));
     QCoreApplication::setApplicationName(QStringLiteral("McDownloader"));
-    QCoreApplication::setApplicationVersion(QStringLiteral("0.1.0"));
+    QCoreApplication::setApplicationVersion(QStringLiteral("1.0.0"));
 
     QFont appFont(QStringLiteral("Microsoft YaHei UI"));
     appFont.setPixelSize(13);

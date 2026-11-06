@@ -8,7 +8,7 @@
 
 原版，以及 Fabric、Quilt、Forge、NeoForge 四种加载器。
 
-版本清单从 BMCLAPI 和 Mojang 同时拉，两边合并去重。单个源挂了照样出列表。原版的客户端、库、资源、日志配置一次下完，每个文件过一遍 SHA1。
+版本清单从 BMCLAPI 和 Mojang 同时拉，两边合并去重。单个源挂了照样出列表，两个都挂了就用上次的离线缓存。原版的客户端、库、资源、日志配置一次下完，每个文件过一遍 SHA1；单个地址失败会按 1/2/4 秒重试，再换镜像。
 
 Fabric 和 Quilt 直接取 profile，不用跑安装器。Forge 和 NeoForge 得先下 installer 再用 Java 跑一遍。
 

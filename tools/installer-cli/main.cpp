@@ -1,4 +1,4 @@
-#include <QCommandLineParser>
+﻿#include <QCommandLineParser>
 #include <QCoreApplication>
 #include <QDir>
 #include <QTextStream>
@@ -11,7 +11,7 @@ int main(int argc, char* argv[])
 {
     QCoreApplication app(argc, argv);
     QCoreApplication::setApplicationName(QStringLiteral("installer-cli"));
-    QCoreApplication::setApplicationVersion(QStringLiteral("0.1.0"));
+    QCoreApplication::setApplicationVersion(QStringLiteral("1.0.0"));
 
     QCommandLineParser parser;
     parser.setApplicationDescription(QStringLiteral("Headless Minecraft installer (vanilla or mod loader)"));

@@ -7,14 +7,14 @@
 
 - 原版安装链路通过（2026-10-21 验收证据保留）。
 - Fabric/Quilt/Forge/NeoForge 的安装代码、UI 和单元测试已恢复并通过；完整网络安装/启动矩阵尚未在本次复验中重跑，状态标记为“待复验”。
-- 2026-11-04 重跑 QtTest：146 个测试全部通过（含网络测试）。
+- 2026-11-06 重跑 QtTest：149 个测试全部通过（含网络测试）。
 
 ## 环境
 
 - Windows 10 x64
 - Qt 5.15.2 MinGW 8.1：`D:\Qt\5.15.2\mingw81_64`、`D:\Qt\Tools\mingw810_64`
 - OpenSSL 1.1.1w：已复制到 Qt `bin`
-- 源码：`D:\PCL2-reverse\downloader`
+- 源码：`D:\PCL2-reverse\McDownloader`
 - 验收 `.minecraft`：`D:\PCL2-reverse\run\downloader-test\.minecraft`
 - PCL2 沙箱：`D:\PCL2-reverse\run\pcl2-sandbox`
 - Java 8：`D:\PCL2-reverse\toolchain\java8\jdk8u504-b01`
@@ -28,10 +28,10 @@ powershell -ExecutionPolicy Bypass -File scripts\run-tests.ps1
 powershell -ExecutionPolicy Bypass -File scripts\run-tests.ps1 -Network
 ```
 
-2026-11-04 结果：
+2026-11-06 结果：
 
 - `scripts\build.ps1`：退出码 0，生成 `build\release\McDownloader.exe`。
-- `scripts\run-tests.ps1 -Network`：18 个套件、146 个测试全部通过。
+- `scripts\run-tests.ps1 -Network`：18 个套件、149 个测试全部通过。
 - UI 冒烟：`--ui-smoke --screenshot` 成功，窗口正常渲染。
 - 分发包：`dist\McDownloader-win64.zip`（单顶层 `McDownloader` 文件夹）。
 
@@ -110,8 +110,8 @@ powershell -ExecutionPolicy Bypass -File scripts\run-tests.ps1 -Network
 
 - 不自动下载 Java；需要用户准备或运行 `scripts\prepare-java8.ps1` / `scripts\prepare-java21.ps1`
 - 覆盖旧版本前自动备份，没有交互式确认弹窗
-- 下载使用空闲超时和镜像 URL 回退；未实现同一 URL 的多次指数退避重试
-- 未实现 manifest 本地缓存（两个版本源都失败时直接报错）
+- 下载使用空闲超时、同一 URL 3 次指数退避重试和镜像 URL 回退
+- 版本清单会缓存到 `cache/version_manifest.json`，两个版本源都失败时使用离线缓存
 - Forge 版本列表只有 BMCLAPI 一个源；Quilt 列表/profile 只有官方源
 - 没有跨进程安装锁
 - OptiFine 未包含
